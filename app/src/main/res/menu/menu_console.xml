@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_mouse"
+        android:checkable="true"
+        android:icon="@drawable/ic_mouse"
+        android:title="&#x1f5b0;"
+        android:visible="false"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_ime"
+        android:icon="@drawable/ic_keyboard"
+        android:title="&#x2328;"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_select"
+        android:icon="@drawable/ic_select_lines_rect"
+        android:title="Select"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_copy"
+        android:icon="?android:attr/actionModeCopyDrawable"
+        android:title="@string/action_copy"
+        android:visible="false"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_paste"
+        android:icon="?android:attr/actionModePasteDrawable"
+        android:title="@string/action_paste"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_charset"
+        android:title="@string/action_charset"
+        app:showAsAction="ifRoom">
+        <menu />
+    </item>
+    <item
+        android:id="@+id/action_keymap"
+        android:title="@string/action_term_key_mapping"
+        app:showAsAction="never">
+        <menu />
+    </item>
+    <item
+        android:id="@+id/action_terminate"
+        android:icon="@drawable/ic_close"
+        android:title="@string/action_terminate"
+        app:showAsAction="never" />
+</menu>

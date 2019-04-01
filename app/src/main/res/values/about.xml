@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+<string name="desc_about"><![CDATA[
+<h1>Introduction</h1>
+<p>Why another one? Just to have:</p>
+<ul>
+    <li>Local pty, USB UART etc. support in the same application;</li>
+    <li>Adequate screen input methods as long as a terminal requires specific keyboard
+    functions.</li>
+</ul>
+<h1>Features and bugs</h1>
+<ul>
+<li>Interface for custom connection modules in separate applications will be added later.</li>
+<li>Supported USB UART devices: Generic USB CDC, CP210X, FTDI, PL2303, CH34x, CP2130 SPI-USB.</li>
+<li>No SSH in the Lite version.</li>
+<li>And no MoSH.</li>
+<li>Telnet (no encryption).</li>
+<li>Local Linux pty is supported. Feel free to follow directions from
+<a href="http://kevinboone.net/android_nonroot.html">
+<i>Using standard Linux utilities in a stock, non-rooted Android device</i>
+by Kevin Boone</a>. ;)</li>
+<li>Arbitrary content providers support will be added later.</li>
+<li>Different charsets and customizable key mapping support.</li>
+<li>Builtin screen keyboard and mouse.</li>
+<li>Minimum supported Android version is 4.0 Ice Cream Sandwich.</li>
+</ul>
+<p>Please, be aware, that key mapping of hardware input devices is provided by device vendors
+and it could make some troubles.
+For example: ASUS ZenFone 4 Max has the hardware keyboard `Home\' (KEYCODE_MOVE_HOME) key
+mapped as the Android middle (KEYCODE_HOME) button that makes it effectively invisible for
+applications.
+Most vendors also maps mouse right and middle buttons in some unexpected ways.
+Fortunately, mouse buttons mapping can usually be worked around.
+Most usual right mouse button mapping as the Android `Back\' (KEYCODE_BACK) button
+is supported by this application.
+The only way to change the vendor\'s mapping is to root your device and change appropriate files
+manually.</p>
+<p>Due to an USB bug in Android itself, it\'s highly recommended not to use the USB UART
+with devices running Android 5.1.1 Lollipop.
+See <a href="https://github.com/felHR85/UsbSerial/issues/142">this issue</a> for more details.</p>
+<h1>Credits</h1>
+<p>Thanks to:</p>
+<ul>
+    <li><a href="https://github.com/felHR85">felHR85</a> and other contributors for
+    <a href="https://github.com/felHR85/UsbSerial">UsbSerial</a> library
+    (<a href="https://github.com/felHR85/UsbSerial/blob/master/LICENSE">license</a>);</li>
+    <li>Creators of
+    <a href="https://www.fontsquirrel.com/fonts/dejavu-sans-mono">DejaVu Sans Mono</a> font
+    (<a href="https://www.fontsquirrel.com/license/dejavu-sans-mono">license</a>).</li>
+</ul>
+<h1>Source</h1>
+<ul>
+<li><a href="https://github.com/green-green-avk/AnotherTermLite">GitHub</a></li>
+</ul>
+]]></string>
+</resources>

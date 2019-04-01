@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="ConsoleScreenView">
+        <attr name="consoleScreenViewStyle" format="reference" />
+        <attr name="selectionMarker" format="reference" />
+    </declare-styleable>
+
+    <style name="AppConsoleScreenViewStyle" parent="AppExtKeyboardViewStyle">
+        <item name="selectionMarker">@drawable/ic_select_cursor</item>
+    </style>
+</resources>

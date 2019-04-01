@@ -1,0 +1,412 @@
+package green_green_avk.anotherterm;
+
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Rect;
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.util.Log;
+import android.view.GestureDetector;
+import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.SubMenu;
+import android.view.View;
+import android.widget.Toast;
+
+import java.nio.charset.Charset;
+
+import green_green_avk.anotherterm.backends.BackendUiInteractionCtx;
+import green_green_avk.anotherterm.ui.ConsoleKeyboardView;
+import green_green_avk.anotherterm.ui.ConsoleScreenView;
+import green_green_avk.anotherterm.ui.MouseButtonsWorkAround;
+import green_green_avk.anotherterm.ui.ScreenMouseView;
+import green_green_avk.anotherterm.ui.UiUtils;
+
+public final class ConsoleActivity extends AppCompatActivity implements ConsoleInput.OnInvalidateSink {
+
+    private int mSessionKey = -1;
+    private Session mSession = null;
+    private ConsoleScreenView mCsv = null;
+    private ConsoleKeyboardView mCkv = null;
+    private ScreenMouseView mVmv = null;
+    private ColorStateList toolbarIconColor = null;
+
+    private int getFirstSessionKey() {
+        return ConsoleService.sessionKeys.listIterator(0).next();
+    }
+
+    private int getLastSessionKey() {
+        return ConsoleService.sessionKeys.listIterator(ConsoleService.sessionKeys.size()).previous();
+    }
+
+    private int getNextSessionKey(final int key) {
+        final int i = ConsoleService.sessionKeys.indexOf(key) + 1;
+        if (i == ConsoleService.sessionKeys.size()) return getFirstSessionKey();
+        return ConsoleService.sessionKeys.listIterator(i).next();
+    }
+
+    private int getPreviousSessionKey(final int key) {
+        final int i = ConsoleService.sessionKeys.indexOf(key);
+        if (i == 0) return getLastSessionKey();
+        return ConsoleService.sessionKeys.listIterator(i).previous();
+    }
+
+    private void startSelf(final int key) {
+        finish();
+        startActivity(new Intent(this, this.getClass()).putExtra(C.IFK_MSG_SESS_KEY, key));
+    }
+
+    private GestureDetector mGestureDetector;
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        return mGestureDetector.onTouchEvent(event) || super.onTouchEvent(event);
+    }
+
+    /*
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) UiUtils.hideSystemUi(this);
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        UiUtils.hideSystemUi(this);
+        return super.dispatchTouchEvent(ev);
+    }
+    */
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        toolbarIconColor = getResources().getColorStateList(R.color.console_toolbar_icon);
+
+        setContentView(R.layout.activity_console);
+        final Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+//        UiUtils.setHiddenSystemUi(this);
+//        UiUtils.setShrinkBottomWhenCovered(this);
+
+        mCsv = findViewById(R.id.screen);
+        mCkv = findViewById(R.id.keyboard);
+        mVmv = findViewById(R.id.mouse);
+
+        mCsv.setFont(FontsManager.consoleTypefaces);
+        mCkv.setFont(FontsManager.consoleTypefaces); // Old Android devices have no glyphs for some special symbols
+
+        mCsv.setFontSize(((App) getApplication()).settings.terminal_font_default_size
+                * getResources().getDisplayMetrics().scaledDensity);
+
+        mGestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                if (mCsv.getSelectionMode()) return true;
+                if (ConsoleService.sessionKeys.size() < 2) return true;
+                if (e1 == null || e2 == null) return true; // avoid null events bug
+                if (Math.abs(e1.getX() - e2.getX()) > 100) {
+                    if (velocityX < -200) {
+                        startSelf(getNextSessionKey(mSessionKey));
+                        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_left);
+                        return true;
+                    }
+                    if (velocityX > 200) {
+                        startSelf(getPreviousSessionKey(mSessionKey));
+                        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_right);
+                        return true;
+                    }
+                }
+                return super.onFling(e1, e2, velocityX, velocityY);
+            }
+        });
+
+        mCsv.setOnTouchListener(
+                new View.OnTouchListener() {
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+//                        UiUtils.hideSystemUi(ConsoleActivity.this); // For earlier versions
+                        mGestureDetector.onTouchEvent(event);
+                        return false;
+                    }
+                }
+        );
+
+        if (ConsoleService.sessionKeys.size() <= 0) {
+            finish();
+            return;
+        }
+        final Intent intent = getIntent();
+        if (!intent.hasExtra(C.IFK_MSG_SESS_KEY)) {
+            if (intent.hasExtra(C.IFK_MSG_SESS_TAIL)) {
+                if (intent.getBooleanExtra(C.IFK_MSG_SESS_TAIL, false)) {
+                    mSessionKey = getLastSessionKey();
+                } else {
+                    mSessionKey = getFirstSessionKey();
+                }
+            }
+        } else {
+            final int k = intent.getIntExtra(C.IFK_MSG_SESS_KEY, 0);
+            if (!ConsoleService.sessionKeys.contains(k)) return;
+            mSessionKey = k;
+        }
+        final int k = mSessionKey;
+        mSession = ConsoleService.sessions.get(k);
+        if (mSession == null) return;
+        setTitle(ConsoleService.getSessionTitle(k));
+        mSession.uiState.csv.apply(mCsv);
+
+        mCsv.setConsoleInput(mSession.input);
+        mCkv.setConsoleOutput(mSession.output);
+        mSession.input.addOnInvalidateSink(this);
+    }
+
+    @Override
+    public void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        onInvalidateSink(null);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!ConsoleService.sessionKeys.contains(mSessionKey)) {
+            finish();
+            return;
+        }
+        ((BackendUiInteractionCtx) mSession.backend.wrapped.getUi()).setActivity(this);
+        mCkv.setAutoRepeatAllowed(((App) getApplication()).settings.terminal_key_repeat);
+        mCkv.setAutoRepeatDelay(((App) getApplication()).settings.terminal_key_repeat_delay);
+        mCkv.setAutoRepeatInterval(((App) getApplication()).settings.terminal_key_repeat_interval);
+    }
+
+    @Override
+    protected void onPause() {
+        ((BackendUiInteractionCtx) mSession.backend.wrapped.getUi()).setActivity(null);
+        mSession.uiState.csv.save(mCsv);
+        mSession.thumbnail = mCsv.makeThumbnail(256, 128);
+        super.onPause();
+    }
+
+    private Menu mMenu = null;
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_console, menu);
+        mMenu = menu;
+        for (int mii = 0; mii < mMenu.size(); ++mii)
+            UiUtils.setMenuItemIconState(mMenu.getItem(mii), new int[]{}, toolbarIconColor);
+        final MenuItem chi = mMenu.findItem(R.id.action_charset);
+/*
+        final Spinner chs = (Spinner) chi.getActionView();
+        chs.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, C.charsetList));
+        if (mSession != null) {
+            final int pos = C.charsetList.indexOf(mSession.output.getCharset().name());
+            if (pos >= 0) chs.setSelection(pos);
+        }
+*/
+        final SubMenu chs = chi.getSubMenu();
+        for (final String chn : C.charsetList) {
+            MenuItem mi = chs.add(chn);
+            mi.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+                @Override
+                public boolean onMenuItemClick(MenuItem item) {
+                    if (mSession != null) {
+                        final String charsetStr = item.getTitle().toString();
+                        try {
+                            final Charset charset = Charset.forName(charsetStr);
+                            mSession.input.setCharset(charset);
+                            mSession.output.setCharset(charset);
+                            chi.setTitle(charsetStr);
+                        } catch (IllegalArgumentException e) {
+                            Log.e("Charset", charsetStr, e);
+                        }
+                    }
+                    return true;
+                }
+            });
+        }
+        if (mSession != null) chi.setTitle(mSession.output.getCharset().name());
+
+        onInvalidateSink(null);
+
+        return true;
+    }
+
+    @Override
+    public void onInvalidateSink(Rect rect) {
+        if (mSession != null) {
+            final boolean ms = mSession.output.isMouseSupported();
+            if (!ms) turnOffMouseMode();
+            if (mMenu != null) {
+                final MenuItem mi = mMenu.findItem(R.id.action_mouse);
+                if (mi.isVisible() != ms)
+                    mi.setVisible(ms);
+            }
+        }
+    }
+
+    private void turnOffMouseMode() {
+        if (!mCsv.getMouseMode()) return;
+        mCsv.setMouseMode(false);
+        if (mMenu != null) {
+            final MenuItem mi = mMenu.findItem(R.id.action_mouse);
+            UiUtils.setMenuItemIconState(mi, new int[]{}, toolbarIconColor);
+            mi.setChecked(false);
+            mVmv.setVisibility(View.GONE);
+        }
+    }
+
+    private void turnOffSelectionMode() {
+        final MenuItem mSelectItem = mMenu.findItem(R.id.action_select);
+        final MenuItem mCopyItem = mMenu.findItem(R.id.action_copy);
+        final MenuItem mPasteItem = mMenu.findItem(R.id.action_paste);
+        UiUtils.setMenuItemIconState(mSelectItem, new int[]{}, toolbarIconColor);
+        mCsv.setSelectionMode(false);
+        mCopyItem.setVisible(false);
+        mPasteItem.setVisible(true);
+        mCsv.setSelectionIsRect(false);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_mouse: {
+                mCsv.setMouseMode(!mCsv.getMouseMode());
+                if (mCsv.getMouseMode()) {
+                    turnOffSelectionMode();
+                    UiUtils.setMenuItemIconState(item, new int[]{android.R.attr.state_checked}, toolbarIconColor);
+                    item.setChecked(true);
+                    mVmv.setVisibility(View.VISIBLE);
+                } else {
+                    UiUtils.setMenuItemIconState(item, new int[]{}, toolbarIconColor);
+                    item.setChecked(false);
+                    mVmv.setVisibility(View.GONE);
+                }
+                return true;
+            }
+            case R.id.action_ime: {
+                mCkv.useIme(!mCkv.isIme());
+                item.setChecked(mCkv.isIme());
+//                UiUtils.hideSystemUi(this);
+                return true;
+            }
+            case R.id.action_select: {
+                if (!mCsv.getSelectionMode()) {
+                    turnOffMouseMode();
+                    final MenuItem mCopyItem = mMenu.findItem(R.id.action_copy);
+                    final MenuItem mPasteItem = mMenu.findItem(R.id.action_paste);
+                    UiUtils.setMenuItemIconState(item, new int[]{R.attr.state_select_lines}, toolbarIconColor);
+                    mCsv.setSelectionMarker(false);
+                    mCopyItem.setVisible(true);
+                    mPasteItem.setVisible(false);
+                    mCsv.setSelectionMode(true);
+                } else if (!mCsv.getSelectionIsRect()) {
+                    UiUtils.setMenuItemIconState(item, new int[]{R.attr.state_select_rect}, toolbarIconColor);
+                    mCsv.setSelectionIsRect(true);
+                } else {
+                    turnOffSelectionMode();
+                }
+                return true;
+            }
+            case R.id.action_copy: {
+                final ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard == null) return true;
+                final String v = mCsv.clipboardCopy();
+                if (v == null) {
+                    Toast.makeText(this, R.string.msg_nothing_to_copy_to_clipboard, Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+                clipboard.setPrimaryClip(ClipData.newPlainText(
+                        v.length() < 16 ? v : v.substring(0, 16) + "...",
+                        v
+                ));
+                Toast.makeText(this, R.string.msg_copied_to_clipboard, Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            case R.id.action_paste: {
+                final ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard == null) return true;
+                if (!clipboard.hasPrimaryClip()) return true;
+                final String v = clipboard.getPrimaryClip().getItemAt(0)
+                        .coerceToText(this).toString();
+                mCkv.clipboardPaste(v);
+                return true;
+            }
+            case R.id.action_charset: {
+                /*
+                if (mSession != null) {
+                    final String charsetStr = ((Spinner)item.getActionView()).getSelectedItem().toString();
+                    try {
+                        final Charset charset = Charset.forName(charsetStr);
+                        mSession.input.setCharset(charset);
+                        mSession.output.setCharset(charset);
+                    } catch (IllegalArgumentException e) {
+                        Log.e("Charset", charsetStr, e);
+                    }
+                }
+                */
+                return true;
+            }
+            case R.id.action_keymap: {
+                TermKeyMapManagerUi.showList(this, new TermKeyMapAdapter.OnSelectListener() {
+                    @Override
+                    public void onSelect(boolean isBuiltIn, String name, TermKeyMapRules rules, String title) {
+                        mSession.output.setKeyMap(rules);
+                    }
+                }, mSession.output.getKeyMap());
+                return true;
+            }
+            case R.id.action_terminate: {
+                final int k = getNextSessionKey(mSessionKey);
+                ConsoleService.stopSession(mSessionKey);
+                if (ConsoleService.sessionKeys.size() <= 0) finish();
+                else {
+                    startSelf(k);
+                    overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_left);
+                }
+                return true;
+            }
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    final MouseButtonsWorkAround mbwa = new MouseButtonsWorkAround(this);
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        return mbwa.onDispatchTouchEvent(ev) ? mbwa.result : super.dispatchTouchEvent(ev);
+    }
+
+    @Override
+    public boolean dispatchGenericMotionEvent(MotionEvent ev) {
+        return mbwa.onDispatchGenericMotionEvent(ev) ? mbwa.result : super.dispatchGenericMotionEvent(ev);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            switch (event.getKeyCode()) {
+                case KeyEvent.KEYCODE_VOLUME_UP: {
+                    if (mCsv.getFontSize() < 64)
+                        mCsv.setFontSize(mCsv.getFontSize() + 1);
+                    return true;
+                }
+                case KeyEvent.KEYCODE_VOLUME_DOWN: {
+                    if (mCsv.getFontSize() > 4)
+                        mCsv.setFontSize(mCsv.getFontSize() - 1);
+                    return true;
+                }
+            }
+        }
+        return mbwa.onDispatchKeyEvent(event) ? mbwa.result : super.dispatchKeyEvent(event);
+    }
+}
