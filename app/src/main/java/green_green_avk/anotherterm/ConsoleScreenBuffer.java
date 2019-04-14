@@ -42,15 +42,15 @@ public final class ConsoleScreenBuffer {
     public boolean wrap = true;
     public String windowTitle = null;
 
-    private static int encodeColor(int c) {
+    private static int encodeColor(final int c) {
         return (Color.red(c) << 4) & 0xF00 | Color.green(c) & 0xF0 | (Color.blue(c) >> 4) & 0xF;
     }
 
-    private static int decodeColor(int v) {
+    private static int decodeColor(final int v) {
         return Color.rgb((v >> 4) & 0xF0, v & 0xF0, (v << 4) & 0xF0);
     }
 
-    public static int encodeAttrs(ConsoleScreenCharAttrs a) {
+    public static int encodeAttrs(@NonNull final ConsoleScreenCharAttrs a) {
         return (encodeColor(a.fgColor) << 20)
                 | (encodeColor(a.bgColor) << 8)
                 | (a.bold ? 1 : 0)
@@ -60,13 +60,13 @@ public final class ConsoleScreenBuffer {
                 | (a.inverse ? 64 : 0);
     }
 
-    public static ConsoleScreenCharAttrs decodeAttrs(int v) {
+    public static ConsoleScreenCharAttrs decodeAttrs(final int v) {
         ConsoleScreenCharAttrs a = new ConsoleScreenCharAttrs();
         decodeAttrs(v, a);
         return a;
     }
 
-    public static void decodeAttrs(int v, ConsoleScreenCharAttrs a) {
+    public static void decodeAttrs(final int v, @NonNull final ConsoleScreenCharAttrs a) {
         a.reset();
         a.fgColor = decodeColor(v >> 20);
         a.bgColor = decodeColor(v >> 8);
@@ -77,23 +77,24 @@ public final class ConsoleScreenBuffer {
         a.inverse = (v & 64) != 0;
     }
 
-    private int toBufY(int y) {
+    private int toBufY(final int y) {
         return Math.min(mRows.size(), mHeight) - y - 1;
     }
 
-    private int fromBufY(int by) {
+    private int fromBufY(final int by) {
         return toBufY(by);
     }
 
-    public ConsoleScreenBuffer(int w, int h, int bh) {
+    public ConsoleScreenBuffer(final int w, final int h, final int bh) {
         this(w, h, bh, DEF_CHAR_ATTRS);
     }
 
-    public ConsoleScreenBuffer(int w, int h, int bh, ConsoleScreenCharAttrs da) {
+    public ConsoleScreenBuffer(final int w, final int h, final int bh,
+                               @NonNull final ConsoleScreenCharAttrs da) {
         this(w, h, bh, encodeAttrs(da));
     }
 
-    public ConsoleScreenBuffer(int w, int h, int bh, int da) {
+    public ConsoleScreenBuffer(final int w, final int h, final int bh, final int da) {
         if (w < 1 || w > MAX_ROW_LEN || h < 1 || h > bh || bh > MAX_BUF_HEIGHT)
             throw new IllegalArgumentException();
         mWidth = w;
@@ -124,11 +125,11 @@ public final class ConsoleScreenBuffer {
         return MathUtils.clamp(mRows.size() - mHeight, 0, mBufHeight);
     }
 
-    public int limitX(int v) {
+    public int limitX(final int v) {
         return MathUtils.clamp(v, 0, mWidth - 1);
     }
 
-    public int limitY(int v) {
+    public int limitY(final int v) {
         return MathUtils.clamp(v, 0, mHeight - 1);
     }
 
@@ -136,11 +137,11 @@ public final class ConsoleScreenBuffer {
         mRows = new ArrayList<>(mBufHeight);
     }
 
-    public void resize(int w, int h) {
+    public void resize(final int w, final int h) {
         resize(w, h, mBufHeight);
     }
 
-    public void resize(int w, int h, int bh) {
+    public void resize(final int w, final int h, final int bh) {
         final int by = toBufY(mPos.y);
         final int bySaved = toBufY(mPosSaved.y);
         if (w < 1 || w > MAX_ROW_LEN || h < 1 || h > bh || bh > MAX_BUF_HEIGHT) return;
@@ -154,7 +155,7 @@ public final class ConsoleScreenBuffer {
         mPosSaved.y = MathUtils.clamp(fromBufY(bySaved), 0, mHeight - 1);
     }
 
-    public CharSequence getChars(int x, int y, int len) {
+    public CharSequence getChars(final int x, final int y, final int len) {
         final int by = toBufY(y);
         if (x < 0 || x >= mWidth || by < 0 || by >= mRows.size()) {
             return null;
@@ -163,7 +164,7 @@ public final class ConsoleScreenBuffer {
         return CharBuffer.wrap(row.text, x, len);
     }
 
-    public CharSequence getChars(int x, int y) {
+    public CharSequence getChars(final int x, final int y) {
         final int by = toBufY(y);
         if (x < 0 || x >= mWidth || by < 0 || by >= mRows.size()) {
             return null;
@@ -172,7 +173,7 @@ public final class ConsoleScreenBuffer {
         return CharBuffer.wrap(row.text, x, FastArrayUtils.getEqualElementsLength(row.attrs, x, mWidth));
     }
 
-    public char getChar(int x, int y) {
+    public char getChar(final int x, final int y) {
         final int by = toBufY(y);
         if (x < 0 || x >= mWidth || by < 0 || by >= mRows.size()) {
             return ' ';
@@ -182,15 +183,15 @@ public final class ConsoleScreenBuffer {
         return text[x];
     }
 
-    public ConsoleScreenCharAttrs getAttrs(int x, int y) {
+    public ConsoleScreenCharAttrs getAttrs(final int x, final int y) {
         return decodeAttrs(getAttrsN(x, y));
     }
 
-    public void getAttrs(int x, int y, ConsoleScreenCharAttrs a) {
+    public void getAttrs(final int x, final int y, @NonNull final ConsoleScreenCharAttrs a) {
         decodeAttrs(getAttrsN(x, y), a);
     }
 
-    public int getAttrsN(int x, int y) {
+    public int getAttrsN(final int x, final int y) {
         final int by = toBufY(y);
         if (x < 0 || x >= mWidth || by < 0 || by >= mRows.size()) {
             return defaultAttrs;
@@ -206,28 +207,28 @@ public final class ConsoleScreenBuffer {
         return limitY(mPos.y + mPos.x / mWidth);
     }
 
-    public void setPosX(int x) {
+    public void setPosX(final int x) {
         mPos.x = limitX(x);
     }
 
-    public void setPosY(int y) {
+    public void setPosY(final int y) {
         mPos.y = limitY(y);
     }
 
-    public void setPos(int x, int y) {
+    public void setPos(final int x, final int y) {
         mPos.x = limitX(x);
         mPos.y = limitY(y);
     }
 
-    public void movePosX(int x) {
+    public void movePosX(final int x) {
         mPos.x = limitX(mPos.x + x);
     }
 
-    public void movePosY(int y) {
+    public void movePosY(final int y) {
         mPos.y = limitY(mPos.y + y);
     }
 
-    public void movePos(int x, int y) {
+    public void movePos(final int x, final int y) {
         mPos.x = limitX(mPos.x + x);
         mPos.y = limitY(mPos.y + y);
     }
@@ -277,7 +278,7 @@ public final class ConsoleScreenBuffer {
         setPos(0, 0);
     }
 
-    public void eraseLines(int from, int to) {
+    public void eraseLines(final int from, final int to) {
         int y2 = toBufY(to);
         if (y2 < 0) {
             scroll(-y2);
@@ -299,7 +300,7 @@ public final class ConsoleScreenBuffer {
         eraseLines(mPos.y, mHeight);
     }
 
-    public void eraseLine(int from, int to, int y) {
+    public void eraseLine(final int from, final int to, final int y) {
         int by = toBufY(y);
         if (by < 0) {
             scroll(-by);
@@ -322,11 +323,11 @@ public final class ConsoleScreenBuffer {
         eraseLine(getPosX(), mWidth, mPos.y);
     }
 
-    public void insertChars(int n) {
+    public void insertChars(final int n) {
         insertChars(mPos.x, mPos.y, n);
     }
 
-    public void insertChars(int x, int y, int n) {
+    public void insertChars(final int x, final int y, int n) {
         final int by = arrangeSetPos(x, y);
         if (by < 0) return;
         if (n > mWidth - x) n = mWidth - x;
@@ -337,11 +338,11 @@ public final class ConsoleScreenBuffer {
         Arrays.fill(row.attrs, x, x + n, currentAttrs);
     }
 
-    public void deleteChars(int n) {
+    public void deleteChars(final int n) {
         deleteChars(mPos.x, mPos.y, n);
     }
 
-    public void deleteChars(int x, int y, int n) {
+    public void deleteChars(final int x, final int y, int n) {
         final int by = arrangeSetPos(x, y);
         if (by < 0) return;
         if (n > mWidth - x) n = mWidth - x;
@@ -352,19 +353,19 @@ public final class ConsoleScreenBuffer {
         Arrays.fill(row.attrs, mWidth - n, mWidth, currentAttrs);
     }
 
-    public int setChars(String s) {
+    public int setChars(@NonNull final String s) {
         return setChars(mPos.x, mPos.y, s, mPos);
     }
 
-    public int setChars(char[] s) {
+    public int setChars(@NonNull final char[] s) {
         return setChars(mPos.x, mPos.y, s, mPos);
     }
 
-    public int setChars(int x, int y, String s, Point endPos) {
+    public int setChars(final int x, final int y, @NonNull final String s, final Point endPos) {
         return setChars(x, y, s.toCharArray(), endPos);
     }
 
-    public int setChars(int x, int y, char[] s, Point endPos) {
+    public int setChars(int x, int y, @NonNull final char[] s, final Point endPos) {
         y += x / mWidth;
         x %= mWidth;
         int by = arrangeSetPos(x, y);
@@ -402,15 +403,16 @@ public final class ConsoleScreenBuffer {
         return len;
     }
 
-    public void setChar(int x, int y, char c) {
+    public void setChar(final int x, final int y, final char c) {
         setChar(x, y, c, currentAttrs);
     }
 
-    public void setChar(int x, int y, char c, ConsoleScreenCharAttrs a) {
+    public void setChar(final int x, final int y, final char c,
+                        @NonNull final ConsoleScreenCharAttrs a) {
         setChar(x, y, c, encodeAttrs(a));
     }
 
-    public void setChar(int x, int y, char c, int a) {
+    public void setChar(int x, int y, final char c, final int a) {
         y += x / mWidth;
         x %= mWidth;
         final int by = arrangeSetPos(x, y);
@@ -419,14 +421,14 @@ public final class ConsoleScreenBuffer {
         mRows.get(by).attrs[x] = a;
     }
 
-    private int arrangeSetPos(int x, int y) {
+    private int arrangeSetPos(final int x, final int y) {
         if (x < 0 || x >= mWidth) {
             return -1;
         }
         return arrangeSetPosY(y);
     }
 
-    private int arrangeSetPosY(int y) {
+    private int arrangeSetPosY(final int y) {
         int by = toBufY(y);
         if (by >= mRows.size()) {
             return -1;
@@ -438,17 +440,17 @@ public final class ConsoleScreenBuffer {
         return by;
     }
 
-    public void scroll(int v) {
+    public void scroll(final int v) {
         _scroll(v, mBufHeight - 1, 0);
     }
 
-    public void scroll(int v, int top, int bottom) {
+    public void scroll(final int v, int top, int bottom) {
         top = MathUtils.clamp(toBufY(top), 0, mBufHeight - 1);
         bottom = MathUtils.clamp(toBufY(bottom), 0, mBufHeight - 1);
         _scroll(v, top, bottom);
     }
 
-    public void scrollRegion(int v) {
+    public void scrollRegion(final int v) {
         final int top = toBufY(
                 MathUtils.clamp(mScrollRegionTop, 0, mHeight - 1)
         );

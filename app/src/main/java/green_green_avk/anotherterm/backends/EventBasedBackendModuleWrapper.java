@@ -110,6 +110,7 @@ public final class EventBasedBackendModuleWrapper {
                 super.close();
             }
 
+            // TODO: get rid of copying: use nio buffers and wait
             @Override
             public void write(final int b) {
                 handler.obtainMessage(MSG_READ, new byte[]{(byte) b}).sendToTarget();
@@ -161,7 +162,7 @@ public final class EventBasedBackendModuleWrapper {
                             }
                             break;
                         case MSG_S_RESIZE: {
-                            int _scrC, _scrR, _scrW, _scrH;
+                            final int _scrC, _scrR, _scrW, _scrH;
                             synchronized (scrLock) {
                                 _scrC = scrC;
                                 _scrR = scrR;

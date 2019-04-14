@@ -33,11 +33,11 @@ import green_green_avk.anotherterm.ui.BackendUiDialogs;
 public final class ConsoleService extends Service {
 
     public static class Exception extends RuntimeException {
-        public Exception(Throwable e) {
+        public Exception(final Throwable e) {
             super(e);
         }
 
-        public Exception(String m) {
+        public Exception(final String m) {
             super(m);
         }
     }
@@ -61,7 +61,7 @@ public final class ConsoleService extends Service {
         tryFg();
     }
 
-    private static void tryStart(Context appCtx) {
+    private static void tryStart(final Context appCtx) {
         appCtx.startService(new Intent(appCtx.getApplicationContext(), ConsoleService.class));
     }
 
@@ -103,7 +103,7 @@ public final class ConsoleService extends Service {
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
+    public IBinder onBind(final Intent intent) {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
@@ -162,13 +162,13 @@ public final class ConsoleService extends Service {
             }
 
             @Override
-            public void onRead(byte[] v) {
+            public void onRead(final byte[] v) {
                 ci.feed(v);
                 ci.invalidateSink();
             }
 
             @Override
-            public void onError(Throwable e) {
+            public void onError(final Throwable e) {
 //                ci.currScrBuf.setChars(e.toString());
                 tbe.getUi().showMessage(e.getMessage());
             }

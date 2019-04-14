@@ -10,7 +10,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.WeakHashMap;
 
 import green_green_avk.anotherterm.backends.EventBasedBackendModuleWrapper;
@@ -35,8 +38,10 @@ public final class ConsoleInput implements BytesSink {
 
     public boolean insertMode = false;
     public boolean cursorVisibility = true; // DECTECM
+    public int defaultTabLength = 8;
+    public final TreeSet<Integer> tabPositions = new TreeSet<>();
 
-    private void sendBack(String v) {
+    private void sendBack(final String v) {
         if (consoleOutput != null)
             consoleOutput.feed(v);
     }
@@ -48,7 +53,7 @@ public final class ConsoleInput implements BytesSink {
         setCharset(Charset.defaultCharset());
     }
 
-    public void setCharset(Charset ch) {
+    public void setCharset(final Charset ch) {
         mStrConv = new InputStreamReader(mChunkedInput, ch);
     }
 
@@ -78,7 +83,7 @@ public final class ConsoleInput implements BytesSink {
         currScrBuf.setCurrentAttrs(mCurrAttrs);
     }
 
-    public void resize(int w, int h) {
+    public void resize(final int w, final int h) {
         mainScrBuf.resize(w, h);
         altScrBuf.resize(w, h, h);
         if (backendModule != null)
@@ -89,24 +94,71 @@ public final class ConsoleInput implements BytesSink {
         return currScrBuf == altScrBuf;
     }
 
-    public void cr() {
+    private void cr() {
         currScrBuf.setPosX(0);
     }
 
-    public void lf() {
+    private void lf() {
         currScrBuf.moveScrollPosY(1);
     }
 
-    public void ri() {
+    private void ri() {
         currScrBuf.setCurrentAttrs(mCurrAttrs);
         currScrBuf.scroll(-1);
     }
 
-    public void bs() {
+    private void bs() {
         currScrBuf.movePosX(-1);
     }
 
-    public void feed(byte[] v) {
+    private void tab(int v) {
+        if (v == 0) return;
+        int pos = currScrBuf.getPosX();
+        final int d;
+        final NavigableSet<Integer> tt;
+        if (v > 0) {
+            d = defaultTabLength;
+            tt = tabPositions.tailSet(pos, false);
+        } else {
+            d = -defaultTabLength;
+            tt = tabPositions.headSet(pos, false).descendingSet();
+            v = -v;
+        }
+        // Standard Java and Android libraries does not have a proper algorithm for it...
+        // As long as Apache Commons...
+        // TODO: TreeList with random access by order index should be implemented.
+        if (v < tt.size()) {
+            final Iterator<Integer> i = tt.iterator();
+            while (v > 0) {
+                pos = i.next();
+                --v;
+            }
+        } else {
+            if (tt.size() > 0) {
+                pos = tt.last();
+                v -= tt.size();
+            }
+            if (v != 0) {
+                pos += d * v;
+                pos -= pos % d;
+            }
+        }
+        currScrBuf.setPosX(pos);
+    }
+
+    private void tabClear(final int pos) {
+        if (pos < 0) {
+            tabPositions.clear();
+            return;
+        }
+        tabPositions.remove(pos);
+    }
+
+    private void tabSet(final int pos) {
+        tabPositions.add(pos);
+    }
+
+    public void feed(@NonNull final byte[] v) {
         if (v.length == 0) return;
         mChunkedInput.add(v);
         try {
@@ -136,6 +188,9 @@ public final class ConsoleInput implements BytesSink {
                             break;
                         case ESC:
                             switch (t.value.charAt(1)) {
+                                case 'H': // HTS
+                                    tabSet(currScrBuf.getPosX());
+                                    break;
                                 case 'M': // RI (Reverse linefeed)
                                     ri();
                                     break;
@@ -171,14 +226,15 @@ public final class ConsoleInput implements BytesSink {
                                     cr();
                                     break;
                                 case '\n':
+                                case '\u000B': // VT
                                     currScrBuf.setCurrentAttrs(mCurrAttrs);
                                     lf();
                                     break;
+                                case '\t':
+                                    tab(1);
+                                    break;
                                 case '\b':
                                     bs();
-                                    break;
-                                case '\u004B':
-                                    ri();
                                     break;
                                 case '\u0007':
                                     // TODO: Bell
@@ -202,7 +258,7 @@ public final class ConsoleInput implements BytesSink {
         }
     }
 
-    private void parseCsi(EscCsi csi) {
+    private void parseCsi(@NonNull final EscCsi csi) {
         switch (csi.prefix) {
             case 0:
                 switch (csi.type) {
@@ -249,6 +305,22 @@ public final class ConsoleInput implements BytesSink {
                         currScrBuf.setPosY(csi.getIntArg(0, 1) - 1);
                         currScrBuf.setPosX(csi.getIntArg(1, 1) - 1);
                         return;
+                    case 'I': // CHT
+                        tab(csi.getIntArg(0, 1));
+                        return;
+                    case 'Z': // CBT
+                        tab(-csi.getIntArg(0, 1));
+                        return;
+                    case 'g': // TBC
+                        switch (csi.getIntArg(0, 0)) {
+                            case 0:
+                                tabClear(currScrBuf.getPosX());
+                                return;
+                            case 3:
+                                tabClear(-1);
+                                return;
+                        }
+                        break;
                     case 'J':
                         currScrBuf.setCurrentAttrs(mCurrAttrs);
                         switch (csi.getIntArg(0, 0)) {

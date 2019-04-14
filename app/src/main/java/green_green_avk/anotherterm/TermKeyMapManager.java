@@ -136,7 +136,7 @@ public final class TermKeyMapManager {
             public Iterator<Meta> iterator() {
                 return new Iterator<Meta>() {
                     int i = 0;
-                    Iterator<? extends Meta> ii[] = new Iterator[]{
+                    final Iterator<? extends Meta> ii[] = new Iterator[]{
                             builtIns.values().iterator(),
                             enumerateCustom().iterator()
                     };
