@@ -20,16 +20,19 @@ public final class ContentRequester extends Requester {
 
     public enum Type {
         BYTES,
-        FD
+        STREAM,
+        URI
     }
 
     public static final class UIFragment extends Requester.UiFragment {
         private final int requestCode = generateRequestCode();
 
-        public BlockingSync<?> result = null; // TODO: Add file descriptor request
+        private BlockingSync<?> result = null; // TODO: Add file descriptor request
+        private Type type = null;
 
         @Override
-        public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        public void onActivityResult(final int requestCode, final int resultCode,
+                                     final Intent data) {
             if (requestCode != this.requestCode) return;
             recycle();
             if (data == null) {
@@ -41,16 +44,24 @@ public final class ContentRequester extends Requester {
                 result.set(null);
                 return;
             }
+            if (type == Type.URI) {
+                ((BlockingSync<Uri>) result).set(uri);
+                return;
+            }
             final InputStream is;
             try {
                 is = getContext().getContentResolver().openInputStream(uri);
-            } catch (Throwable e) {
+            } catch (final Throwable e) {
                 // TODO: Error reporting
                 result.set(null);
                 return;
             }
             if (is == null) {
                 result.set(null);
+                return;
+            }
+            if (type == Type.STREAM) {
+                ((BlockingSync<InputStream>) result).set(is);
                 return;
             }
             @SuppressLint("StaticFieldLeak") final AsyncTask<Object, Object, Object> task =
@@ -60,13 +71,13 @@ public final class ContentRequester extends Requester {
                             final byte[] buf;
                             try {
                                 buf = Misc.toArray(is);
-                            } catch (IOException ignored) {
+                            } catch (final IOException ignored) {
                                 result.set(null);
                                 return null;
                             } finally {
                                 try {
                                     is.close();
-                                } catch (IOException ignored) {
+                                } catch (final IOException ignored) {
                                 }
                             }
                             ((BlockingSync<byte[]>) result).set(buf);
@@ -76,14 +87,19 @@ public final class ContentRequester extends Requester {
             task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, (Object[]) null);
         }
 
-        public void requestContent(@NonNull final BlockingSync<?> result, final Type type, @NonNull final String message, @NonNull final String mimeType) {
+        public void requestContent(@NonNull final BlockingSync<?> result, final Type type,
+                                   @NonNull final String message, @NonNull final String mimeType) {
             this.result = result;
-            final Intent i = new Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE).setType(mimeType);
-            startActivityForResult(i, requestCode);
+            this.type = type;
+            final Intent i = new Intent(Intent.ACTION_GET_CONTENT)
+                    .addCategory(Intent.CATEGORY_OPENABLE).setType(mimeType);
+            startActivityForResult(Intent.createChooser(i, message), requestCode);
         }
     }
 
-    public static void request(@NonNull final BlockingSync<?> result, final Type type, @NonNull final Context ctx, @NonNull final String message, @NonNull final String mimeType) {
+    public static void request(@NonNull final BlockingSync<?> result, final Type type,
+                               @NonNull final Context ctx, @NonNull final String message,
+                               @NonNull final String mimeType) {
         ((FragmentActivity) ctx).runOnUiThread(new Runnable() {
             @Override
             public void run() {

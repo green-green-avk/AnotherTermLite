@@ -26,6 +26,8 @@ public final class App extends Application {
 
     public final Settings settings = new Settings();
 
+    public TermSh termSh;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -33,5 +35,6 @@ public final class App extends Application {
         FontsManager.init(this);
         TermKeyMapManager.init(this);
         FavoritesManager.init(this);
+        termSh = new TermSh(this);
     }
 }

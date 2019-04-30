@@ -21,7 +21,6 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
-
         <activity
             android:name=".SessionsActivity"
             android:label="@string/app_name"
@@ -91,7 +90,18 @@
             android:parentActivityName=".SessionsActivity" />
         <activity
             android:name=".InfoActivity"
-            android:label="@string/info" />
+            android:exported="false"
+            android:label="@string/info"
+            tools:ignore="AppLinkUrlError">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="infores" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

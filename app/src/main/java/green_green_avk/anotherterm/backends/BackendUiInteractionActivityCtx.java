@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.support.annotation.Nullable;
 import android.support.annotation.UiThread;
 
-public interface BackendUiInteractionCtx {
+public interface BackendUiInteractionActivityCtx {
     @UiThread
-    void setActivity(@Nullable final Activity ctx);
+    void setActivity(@Nullable Activity ctx);
 }

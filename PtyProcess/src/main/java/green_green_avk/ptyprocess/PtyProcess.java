@@ -154,4 +154,8 @@ public final class PtyProcess extends Process {
             writeBuf(b, off, len);
         }
     };
+
+    // Actual only before API 21
+    @Keep
+    public static native long getArgMax();
 }

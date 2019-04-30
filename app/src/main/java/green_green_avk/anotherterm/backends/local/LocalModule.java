@@ -125,6 +125,7 @@ public final class LocalModule extends BackendModule {
         final File extDataDir = context.getExternalFilesDir(null);
         if (extDataDir != null)
             env.put("EXTERNAL_DATA_DIR", extDataDir.getAbsolutePath());
+        env.put("LIB_DIR", context.getApplicationInfo().nativeLibraryDir);
         synchronized (connectionLock) {
             proc = PtyProcess.system(execute, env);
             readerThread = new Thread(new ProcOutputR(proc.getInputStream()));

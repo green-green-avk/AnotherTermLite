@@ -7,13 +7,26 @@ import android.util.SparseIntArray;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
 public final class Misc {
+    public static final Charset UTF8 = Charset.forName("UTF8");
+
     private Misc() {
+    }
+
+    @NonNull
+    public static String fromUTF8(@NonNull final byte[] buf) {
+        return new String(buf, UTF8);
+    }
+
+    @NonNull
+    public static byte[] toUTF8(@NonNull final String v) {
+        return v.getBytes(UTF8);
     }
 
     // IOUtils.toByteArray() from the Apache Commons IO

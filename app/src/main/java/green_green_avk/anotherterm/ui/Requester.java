@@ -13,16 +13,16 @@ import android.support.v4.app.FragmentManager;
 import java.util.UUID;
 
 public abstract class Requester {
+    public static int generateRequestCode() {
+        return (int) UUID.randomUUID().getLeastSignificantBits() & 0xFFFF;
+    }
+
     @SuppressLint("ValidFragment")
     protected static class UiFragment extends Fragment {
         private static final String TAG = "UiFragment";
 
-        protected static int generateRequestCode() {
-            return (int) UUID.randomUUID().getLeastSignificantBits() & 0xFFFF;
-        }
-
         @Override
-        public void onCreate(@Nullable Bundle savedInstanceState) {
+        public void onCreate(@Nullable final Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
             setRetainInstance(true);
         }

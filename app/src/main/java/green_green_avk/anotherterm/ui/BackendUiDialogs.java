@@ -29,13 +29,13 @@ import java.util.WeakHashMap;
 
 import green_green_avk.anotherterm.R;
 import green_green_avk.anotherterm.backends.BackendUiInteraction;
-import green_green_avk.anotherterm.backends.BackendUiInteractionCtx;
+import green_green_avk.anotherterm.backends.BackendUiInteractionActivityCtx;
 import green_green_avk.anotherterm.utils.BlockingSync;
 import green_green_avk.anotherterm.utils.LogMessage;
 import green_green_avk.anotherterm.utils.WeakBlockingSync;
 
 // TODO: Split into UI and UI thread connector queue classes
-public final class BackendUiDialogs implements BackendUiInteraction, BackendUiInteractionCtx {
+public final class BackendUiDialogs implements BackendUiInteraction, BackendUiInteractionActivityCtx {
 
     private final WeakBlockingSync<Activity> ctxRef = new WeakBlockingSync<>();
 

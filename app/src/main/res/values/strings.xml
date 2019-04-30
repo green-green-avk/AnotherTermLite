@@ -22,6 +22,7 @@
     <string name="action_settings_keepalive_and_battery_optimization">Session Keep-Alive and Battery Optimization</string>
     <string name="desc_doze"><![CDATA[
         <p>If you want to keep a network connection open
+        or local console applications running
         when your phone is asleep for a long time,
         turn off the battery optimization for this application
         in the Battery Optimization Settings.</p>
@@ -74,13 +75,22 @@
     <string name="desc_local_param_execute"><![CDATA[
         If the field is empty, <b>`/system/bin/sh -l\'</b> will be executed;<br>
         <b>`/system/bin/sh -l -c &lt;command&gt;\'</b> otherwise.
+        <p>Commands:
+        <ul>
+        <li><clipboard>$LIB_DIR/libtermsh.so</clipboard> - a tool to use Android functionality from
+        the shell.
+        Use `help\' argument for <a href="infores:termsh_man">details</a>.</li>
+        </ul></p>
         <p>Environment variables:
         <ul>
         <li><clipboard>DATA_DIR</clipboard> &#x2014; default persistent data directory</li>
-        <li><clipboard>PROTECTED_DATA_DIR</clipboard> &#x2014; default device-protected persistent data directory (set if available)</li>
-        <li><clipboard>EXTERNAL_DATA_DIR</clipboard> &#x2014; external persistent data directory (set if available)</li>
+        <li><clipboard>PROTECTED_DATA_DIR</clipboard> &#x2014; default device-protected persistent
+        data directory (set if available)</li>
+        <li><clipboard>EXTERNAL_DATA_DIR</clipboard> &#x2014; external persistent data directory
+        (set if available)</li>
         <ul/></p>
     ]]></string>
+    <string name="example_local_param_execute">export TERMSH=\"$LIB_DIR/libtermsh.so\" ; cd $DATA_DIR ; sh</string>
     <string name="conntype_telnet">Telnet</string>
     <string name="title_activity_settings">Settings</string>
     <string name="key_map">Key Map</string>

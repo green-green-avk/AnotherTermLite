@@ -21,7 +21,7 @@ import android.widget.Toast;
 
 import java.nio.charset.Charset;
 
-import green_green_avk.anotherterm.backends.BackendUiInteractionCtx;
+import green_green_avk.anotherterm.backends.BackendUiInteractionActivityCtx;
 import green_green_avk.anotherterm.ui.ConsoleKeyboardView;
 import green_green_avk.anotherterm.ui.ConsoleScreenView;
 import green_green_avk.anotherterm.ui.MouseButtonsWorkAround;
@@ -182,7 +182,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
             finish();
             return;
         }
-        ((BackendUiInteractionCtx) mSession.backend.wrapped.getUi()).setActivity(this);
+        ((BackendUiInteractionActivityCtx) mSession.backend.wrapped.getUi()).setActivity(this);
         mCkv.setAutoRepeatAllowed(((App) getApplication()).settings.terminal_key_repeat);
         mCkv.setAutoRepeatDelay(((App) getApplication()).settings.terminal_key_repeat_delay);
         mCkv.setAutoRepeatInterval(((App) getApplication()).settings.terminal_key_repeat_interval);
@@ -190,7 +190,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
 
     @Override
     protected void onPause() {
-        ((BackendUiInteractionCtx) mSession.backend.wrapped.getUi()).setActivity(null);
+        ((BackendUiInteractionActivityCtx) mSession.backend.wrapped.getUi()).setActivity(null);
         mSession.uiState.csv.save(mCsv);
         mSession.thumbnail = mCsv.makeThumbnail(256, 128);
         super.onPause();

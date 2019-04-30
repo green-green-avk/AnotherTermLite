@@ -75,21 +75,19 @@ public final class ConsoleService extends Service {
                 new Intent(getApplicationContext(), SessionsActivity.class)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         );
-        NotificationCompat.Builder nb;
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            nb = new NotificationCompat.Builder(getApplicationContext());
-        } else {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             final NotificationChannel nc = new NotificationChannel(NOTIFICATION_CHANNEL_ID,
                     getString(R.string.app_name),
                     NotificationManager.IMPORTANCE_LOW);
             ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE))
                     .createNotificationChannel(nc);
-            nb = new NotificationCompat.Builder(getApplicationContext(), NOTIFICATION_CHANNEL_ID);
         }
-        final Notification n = nb
+        final Notification n = new NotificationCompat.Builder(getApplicationContext(),
+                NOTIFICATION_CHANNEL_ID)
                 .setContentTitle(getString(R.string.there_are_active_terminals))
 //                .setContentText("Console is running")
                 .setSmallIcon(R.drawable.ic_stat_serv)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setContentIntent(sb.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT))
                 .build();
         startForeground(ID_FG, n);

@@ -7,11 +7,11 @@ import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class InputTokenizer implements Iterator<InputTokenizer.Token>, Iterable<InputTokenizer.Token> {
-    protected static final int SEQ_MAXLEN = 256;
-    public static final Pattern CTL_PAT = Pattern.compile("[\\x00-\\x1F\\x7F]");
-    public static final Pattern CSI_END_PAT = Pattern.compile("[@A-Z\\\\^_`a-z{|}~]");
-    public static final Pattern OSC_END_PAT = Pattern.compile("\\a|\\e\\\\");
+public final class InputTokenizer implements Iterator<InputTokenizer.Token>, Iterable<InputTokenizer.Token> {
+    private static final int SEQ_MAXLEN = 256;
+    private static final Pattern CTL_PAT = Pattern.compile("[\\x00-\\x1F\\x7F]");
+    private static final Pattern CSI_END_PAT = Pattern.compile("[@A-Z\\\\^_`a-z{|}~]");
+    private static final Pattern OSC_END_PAT = Pattern.compile("\\a|\\e\\\\");
 
     public static final class Token {
         public enum Type {
@@ -21,20 +21,20 @@ public class InputTokenizer implements Iterator<InputTokenizer.Token>, Iterable<
         public final Type type;
         public final String value;
 
-        public Token(Type t, String v) {
+        public Token(@NonNull final Type t, @NonNull final String v) {
             type = t;
             value = v;
         }
     }
 
-    protected String mStr = "";
-    protected int mPos = 0;
-    protected String mToken = null;
-    protected Token.Type mType = Token.Type.TEXT;
-    protected Boolean mGotNext = false;
+    private String mStr = "";
+    private int mPos = 0;
+    private String mToken = null;
+    private Token.Type mType = Token.Type.TEXT;
+    private Boolean mGotNext = false;
 
-    protected void getSequence(int pos, Pattern pat) {
-        Matcher m = pat.matcher(mStr);
+    private void getSequence(int pos, final Pattern pat) {
+        final Matcher m = pat.matcher(mStr);
         m.region(pos, mStr.length());
         if (!m.find()) {
             if ((mStr.length() - pos) > SEQ_MAXLEN) {
@@ -51,12 +51,12 @@ public class InputTokenizer implements Iterator<InputTokenizer.Token>, Iterable<
         mPos = pos;
     }
 
-    protected void getNext() {
+    private void getNext() {
         if (mStr.length() == mPos) {
             mToken = null;
             return;
         }
-        Matcher m;
+        final Matcher m;
         int pos;
         m = CTL_PAT.matcher(mStr);
         m.region(mPos, mStr.length());
@@ -111,7 +111,7 @@ public class InputTokenizer implements Iterator<InputTokenizer.Token>, Iterable<
                     mPos = pos;
                     return;
             }
-        } catch (IndexOutOfBoundsException e) {
+        } catch (final IndexOutOfBoundsException e) {
             mToken = null;
             return;
         }
@@ -138,15 +138,15 @@ public class InputTokenizer implements Iterator<InputTokenizer.Token>, Iterable<
         return this;
     }
 
-    public void tokenize(char[] buf, int start, int len) {
+    public void tokenize(@NonNull final char[] buf, final int start, final int len) {
         tokenize(new String(buf, start, len));
     }
 
-    public void tokenize(CharSequence v) {
+    public void tokenize(@NonNull final CharSequence v) {
         tokenize(v.toString());
     }
 
-    public void tokenize(String v) {
+    public void tokenize(@NonNull final String v) {
         if (mStr.length() == mPos) {
             mStr = v;
         } else {

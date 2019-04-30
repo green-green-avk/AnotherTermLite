@@ -43,7 +43,8 @@
             android:layout_height="wrap_content"
             android:hint="@string/shell"
             android:inputType="text|textMultiLine|textNoSuggestions"
-            android:tag="execute" />
+            android:tag="execute"
+            android:text="@string/example_local_param_execute" />
 
     </LinearLayout>
 

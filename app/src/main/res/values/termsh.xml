@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="desc_termsh_help"><![CDATA[
+\
+    termsh help
+
+        This message.
+
+
+    termsh notify [-i|--id] [message]
+
+        Display notification,
+        stdin will be used if no message argument provided.
+\
+\
+]]></string>
+</resources>

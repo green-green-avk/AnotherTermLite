@@ -5,15 +5,15 @@ import android.support.annotation.Nullable;
 
 public interface BackendUiInteraction {
     @Nullable
-    String promptPassword(@NonNull final String message) throws InterruptedException;
+    String promptPassword(@NonNull String message) throws InterruptedException;
 
-    boolean promptYesNo(@NonNull final String message) throws InterruptedException;
+    boolean promptYesNo(@NonNull String message) throws InterruptedException;
 
-    void showMessage(@NonNull final String message);
+    void showMessage(@NonNull String message);
 
-    void showToast(@NonNull final String message);
+    void showToast(@NonNull String message);
 
-    byte[] promptContent(@NonNull final String message, @NonNull final String mimeType) throws InterruptedException;
+    byte[] promptContent(@NonNull String message, @NonNull String mimeType) throws InterruptedException;
 
-    boolean promptPermissions(@NonNull final String[] perms) throws InterruptedException;
+    boolean promptPermissions(@NonNull String[] perms) throws InterruptedException;
 }

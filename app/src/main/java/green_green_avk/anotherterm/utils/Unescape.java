@@ -27,7 +27,7 @@ public final class Unescape {
         );
     }
 
-    public static String c(CharSequence v) {
+    public static String c(final CharSequence v) {
         return c_base.translate(v);
     }
 }

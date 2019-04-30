@@ -230,14 +230,20 @@ static void JNICALL m_writeBuf(JNIEnv *const env, const jobject jthis,
     }
 }
 
+static jlong JNICALL m_getArgMax(JNIEnv *const env, const jobject jthis) {
+    return sysconf(_SC_ARG_MAX);
+}
+
 static JNINativeMethod methodTable[] = {
-        {"execve",    "(Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;)L" CLASS_NAME ";", (void *) m_execve},
-        {"destroy",   "()V",                                                                        (void *) m_destroy},
-        {"resize",    "(IIII)V",                                                                    (void *) m_resize},
-        {"readByte",  "()I",                                                                        (void *) m_readByte},
-        {"readBuf",   "([BII)I",                                                                    (void *) m_readBuf},
-        {"writeByte", "(I)V",                                                                       (void *) m_writeByte},
-        {"writeBuf",  "([BII)V",                                                                    (void *) m_writeBuf}
+        {"execve",    "(Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;)L" CLASS_NAME ";",
+                                 (void *) m_execve},
+        {"destroy",   "()V",     (void *) m_destroy},
+        {"resize",    "(IIII)V", (void *) m_resize},
+        {"readByte",  "()I",     (void *) m_readByte},
+        {"readBuf",   "([BII)I", (void *) m_readBuf},
+        {"writeByte", "(I)V",    (void *) m_writeByte},
+        {"writeBuf",  "([BII)V", (void *) m_writeBuf},
+        {"getArgMax", "()J",     (void *) m_getArgMax}
 };
 
 extern "C"
