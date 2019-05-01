@@ -10,11 +10,56 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <termios.h>
+#include <signal.h>
 
 #include <android/log.h>
 
-ssize_t sendFds(const int sockfd, const void *const data, const size_t len,
-                const int *const fds, const size_t fdsc) {
+typedef struct {
+    bool raw;
+} options_t;
+
+typedef struct {
+    const size_t field_offset;
+
+    void (*const field_setter)(void *const field_ptr, const char *const value);
+
+    const char *const arg;
+    const size_t arg_len;
+} option_desc_t;
+
+static void field_bool(void *const field_ptr, const char *const value) {
+    *(bool *) field_ptr = true;
+}
+
+#define OPT_DESC(F, S, A) {offsetof(options_t, F), (S), (A), sizeof(A) - 1}
+
+static const option_desc_t options_desc[] = {
+        OPT_DESC(raw, field_bool, "-r"),
+        OPT_DESC(raw, field_bool, "--raw")
+};
+
+static size_t getOpts(options_t *const options, const int argc, const char *const *const argv) {
+    size_t i = 0;
+    for (; i < argc; ++i) {
+        for (int oi = 0; oi < (sizeof(options_desc) / sizeof(options_desc[0])); ++oi) {
+            const option_desc_t *od = options_desc + oi;
+            const char *const arg = argv[i];
+            if (od->arg[od->arg_len - 1] == '=' ?
+                strncmp(od->arg, arg, od->arg_len) == 0 :
+                strcmp(od->arg, arg) == 0) {
+                od->field_setter(options + od->field_offset, arg + od->arg_len);
+                goto next;
+            }
+        }
+        break;
+        next:;
+    }
+    return i;
+}
+
+static ssize_t sendFds(const int sockfd, const void *const data, const size_t len,
+                       const int *const fds, const size_t fdsc) {
     const size_t cmsg_space = CMSG_SPACE(sizeof(int) * fdsc);
     const size_t cmsg_len = CMSG_LEN(sizeof(int) * fdsc);
     if (cmsg_space >= PAGE_SIZE) {
@@ -49,7 +94,49 @@ ssize_t sendFds(const int sockfd, const void *const data, const size_t len,
     return TEMP_FAILURE_RETRY(sendmsg(sockfd, &msg, flags));
 }
 
-int main(int argc, char **argv) {
+static struct termios def_mode;
+
+static void saveMode() {
+    tcgetattr(STDIN_FILENO, &def_mode);
+}
+
+static void setRawMode() {
+    struct termios mode = def_mode;
+    cfmakeraw(&mode);
+    tcsetattr(STDIN_FILENO, TCSANOW, &mode);
+}
+
+static void restoreMode() {
+    tcsetattr(STDIN_FILENO, TCSANOW, &def_mode);
+}
+
+static void _onExit() {
+    restoreMode();
+}
+
+static void _onSignalExit(int s) {
+    exit(1);
+}
+
+int main(const int argc, const char *const *const argv) {
+    options_t options = {.raw = false};
+
+    int c_argc = argc - 1;
+    const char *const *c_argv = argv + 1;
+    const size_t args_offset = getOpts(&options, c_argc, c_argv);
+    c_argc -= args_offset;
+    c_argv += args_offset;
+
+    saveMode();
+    atexit(_onExit);
+    signal(SIGTERM, _onSignalExit);
+    signal(SIGINT, _onSignalExit);
+    signal(SIGPIPE, _onSignalExit);
+    signal(SIGUSR1, _onSignalExit);
+    signal(SIGUSR2, _onSignalExit);
+
+    if (options.raw) setRawMode();
+
     const char socketName[] = "\0" APPLICATION_ID ".termsh";
     const int sock = socket(AF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if (sock < 0) {
@@ -62,14 +149,14 @@ int main(int argc, char **argv) {
     if (connect(sock, (struct sockaddr *) &sockAddr,
                 sizeof(socketName) - 1 + offsetof(struct sockaddr_un, sun_path)) < 0) {
         close(sock);
-        perror("Can't connect to termsh backend");
+        perror("Can't connect to termsh server");
         exit(1);
     }
     struct ucred cr;
     socklen_t cr_len = sizeof(cr);
     if (getsockopt(sock, SOL_SOCKET, SO_PEERCRED, &cr, &cr_len) != 0) {
         close(sock);
-        perror("Can't check termsh backend");
+        perror("Can't check termsh server");
         exit(1);
     }
     if (cr.uid != getuid()) {
@@ -78,17 +165,15 @@ int main(int argc, char **argv) {
         __android_log_write(ANDROID_LOG_ERROR, "termsh", "Spoofing detected!");
         exit(1);
     }
-    const int fds[] = {0, 1, 2};
-    const char _argc = (char) (argc - 1);
+    const int fds[] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+    const char _argc = (char) c_argc;
     if (sendFds(sock, &_argc, 1, fds, 3) < 0) goto error_args;
-    for (int i = 1; i < argc; ++i) {
-        const size_t l = strlen(argv[i]);
+    for (int i = 0; i < c_argc; ++i) {
+        const size_t l = strlen(c_argv[i]);
         const uint32_t _l = htonl(l); // always big-endian
         if (write(sock, &_l, 4) < 0) goto error_args;
-        if (write(sock, argv[i], l) < 0) goto error_args;
+        if (write(sock, c_argv[i], l) < 0) goto error_args;
     }
-    close(0);
-    close(1);
     while (true) {
         char result;
         const ssize_t r = read(sock, &result, 1);

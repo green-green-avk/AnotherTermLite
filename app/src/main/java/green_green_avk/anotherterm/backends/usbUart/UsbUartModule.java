@@ -28,6 +28,7 @@ import java.util.Set;
 import green_green_avk.anotherterm.backends.BackendException;
 import green_green_avk.anotherterm.backends.BackendModule;
 import green_green_avk.anotherterm.utils.BlockingSync;
+import green_green_avk.anotherterm.utils.SimpleBiDirHashMap;
 
 public final class UsbUartModule extends BackendModule {
 
@@ -50,7 +51,7 @@ public final class UsbUartModule extends BackendModule {
                     params.put("stopbits", ps.get(2));
                     params.put("parity", ps.get(3));
                     params.put("flowcontrol", ps.get(4));
-                } catch (NumberFormatException ignored) {
+                } catch (final NumberFormatException ignored) {
                 }
             }
             return params;
@@ -90,10 +91,14 @@ public final class UsbUartModule extends BackendModule {
 
 //    private enum FlowControl {OFF, XON_XOFF, RTS_CTS}
 
-    private static final Map<String, Integer> dataBitsOpts = new HashMap<>();
-    private static final Map<String, Integer> stopBitsOpts = new HashMap<>();
-    private static final Map<String, Integer> parityOpts = new HashMap<>();
-    private static final Map<String, Integer> flowControlOpts = new HashMap<>();
+    private static final SimpleBiDirHashMap<String, Integer> dataBitsOpts
+            = new SimpleBiDirHashMap<>();
+    private static final SimpleBiDirHashMap<String, Integer> stopBitsOpts
+            = new SimpleBiDirHashMap<>();
+    private static final SimpleBiDirHashMap<String, Integer> parityOpts
+            = new SimpleBiDirHashMap<>();
+    private static final SimpleBiDirHashMap<String, Integer> flowControlOpts
+            = new SimpleBiDirHashMap<>();
 
     static {
         dataBitsOpts.put("8", UsbSerialInterface.DATA_BITS_8);
@@ -146,6 +151,12 @@ public final class UsbUartModule extends BackendModule {
         }
     };
 
+    private OnMessageListener onMessageListener = null;
+
+    private void reportError(@NonNull final Throwable e) {
+        if (onMessageListener != null) onMessageListener.onMessage(e);
+    }
+
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     private static final String ACTION_USB_ATTACHED = "android.hardware.usb.action.USB_DEVICE_ATTACHED";
     private static final String ACTION_USB_DETACHED = "android.hardware.usb.action.USB_DEVICE_DETACHED";
@@ -167,6 +178,7 @@ public final class UsbUartModule extends BackendModule {
                                 try {
                                     makeConnection(true);
                                 } catch (final BackendException e) {
+                                    reportError(e);
                                 }
                             }
                         };
@@ -252,7 +264,13 @@ public final class UsbUartModule extends BackendModule {
     @NonNull
     @Override
     public String getConnDesc() {
-        return String.format("%d", baudrate);
+        final Map<String, Object> pp = new HashMap<>();
+        pp.put("baudrate", baudrate);
+        pp.put("databits", dataBitsOpts.rev.get(dataBits));
+        pp.put("stopbits", stopBitsOpts.rev.get(stopBits));
+        pp.put("parity", parityOpts.rev.get(parity));
+        pp.put("flowcontrol", flowControlOpts.rev.get(flowControl));
+        return meta.toUri(pp).toString();
     }
 
     private void obtainDevice() {
@@ -317,7 +335,7 @@ public final class UsbUartModule extends BackendModule {
                 } catch (final IOException e) {
                     disconnect();
                     Log.e("USB", "Unexpected frontend problem", e);
-                    throw new BackendException("Frontend is inaccessible");
+                    reportError(new BackendException("Frontend is inaccessible"));
                 }
             }
         }

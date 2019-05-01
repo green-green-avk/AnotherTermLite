@@ -2,15 +2,42 @@
 <resources>
     <string name="desc_termsh_help"><![CDATA[
 \
-    termsh help
+    USAGE:
+
+    termsh [-r|--raw] <command> [<arg>]...
+
+      -r|--raw - raw mode as set by cfmakeraw().
+        (Beware, Ctrl-C etc. are not captured by the terminal in this mode.)
+
+
+    Commands:
+
+    * help
 
         This message.
 
 
-    termsh notify [-i|--id] [message]
+    * notify [-i|--id] [<message>]
 
         Display notification,
         stdin will be used if no message argument provided.
+
+        -i|--id - notification id
+
+
+    * serial [<baudrate>[/<databits>[/<stopbits>[/<parity>[/<flowcontrol>]]]]]
+
+        Connect to an USB serial dongle and use stdin / stdout.
+
+        Default: 9600/8/1/none/off
+
+        databits - 8, 7, 6, 5
+
+        stopbits - 1, 1.5, 2
+
+        parity - none, even, odd, mark, space
+
+        flowcontrol - off, xon_xoff, rts_cts, dsr_dtr
 \
 \
 ]]></string>

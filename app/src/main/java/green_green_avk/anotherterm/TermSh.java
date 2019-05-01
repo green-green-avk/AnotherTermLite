@@ -7,6 +7,7 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
@@ -33,6 +34,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.CharBuffer;
 import java.util.Map;
 
+import green_green_avk.anotherterm.backends.BackendException;
+import green_green_avk.anotherterm.backends.BackendModule;
+import green_green_avk.anotherterm.backends.usbUart.UsbUartModule;
 import green_green_avk.anotherterm.utils.BinaryGetOpts;
 import green_green_avk.anotherterm.utils.Misc;
 
@@ -49,6 +53,10 @@ public final class TermSh {
         private UiBridge(@NonNull final Context context) {
             ctx = context;
             handler = new Handler();
+        }
+
+        private void runOnUiThread(@NonNull final Runnable runnable) {
+            handler.post(runnable);
         }
 
         private int getNextNotificationId() {
@@ -293,6 +301,52 @@ public final class TermSh {
                             ui.makeNotification(msg, id);
                             break;
                         }
+                        case "serial": {
+                            if (shellCmd.args.length != 2)
+                                throw new ParseException("Wrong number of arguments");
+                            final Map<String, ?> params
+                                    = UsbUartModule.meta.fromUri(Uri.parse(
+                                    "uart:/" + Misc.fromUTF8(shellCmd.args[1])));
+                            final BackendModule be = new UsbUartModule();
+                            be.setContext(ui.ctx);
+                            be.setOnMessageListener(new BackendModule.OnMessageListener() {
+                                @Override
+                                public void onMessage(final Object msg) {
+                                    if (msg instanceof Throwable) {
+                                        try {
+                                            shellCmd.stdErr.write(Misc.toUTF8(((Throwable) msg)
+                                                    .getMessage() + "\n"));
+                                        } catch (final IOException ignored) {
+                                        }
+                                    }
+                                }
+                            });
+                            // be.setUi(); // TODO: Maybe...
+                            be.setOutputStream(shellCmd.stdOut);
+                            final OutputStream toBe = be.getOutputStream();
+                            try {
+                                be.setParameters(params);
+                                be.connect();
+                                final byte[] buf = new byte[8192];
+                                try {
+                                    while (true) {
+                                        final int r = shellCmd.stdIn.read(buf);
+                                        if (r < 0) break;
+                                        toBe.write(buf, 0, r);
+                                    }
+                                } catch (final IOException | BackendException e) {
+                                    try {
+                                        be.disconnect();
+                                    } catch (final BackendException ignored) {
+                                    }
+                                    throw new IOException(e);
+                                }
+                                be.disconnect();
+                            } catch (final BackendException e) {
+                                throw new IOException(e);
+                            }
+                            break;
+                        }
                         default:
                             throw new ParseException("Unknown command");
                     }
@@ -314,7 +368,12 @@ public final class TermSh {
                 serverSocket = new LocalServerSocket(ui.ctx.getPackageName() + ".termsh");
                 while (!Thread.interrupted()) {
                     final LocalSocket socket = serverSocket.accept();
-                    new ClientTask().execute(socket);
+                    ui.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            new ClientTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, socket);
+                        }
+                    });
                 }
             } catch (final InterruptedIOException ignored) {
             } catch (final IOException e) {

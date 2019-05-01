@@ -19,7 +19,7 @@
 <a href="http://kevinboone.net/android_nonroot.html">
 <i>Using standard Linux utilities in a stock, non-rooted Android device</i>
 by Kevin Boone</a>. ;)</li>
-<li>A shell utility to interact with the Android environment introduction has been started.</li>
+<li>The introduction of a shell utility to interact with the Android environment has been started.</li>
 <li>Arbitrary content providers support will be added later.</li>
 <li>Different charsets and customizable key mapping support.</li>
 <li>Builtin screen keyboard and mouse.</li>
