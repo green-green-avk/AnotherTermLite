@@ -5,6 +5,8 @@ import android.support.annotation.NonNull;
 import android.support.v4.text.HtmlCompat;
 import android.text.Spannable;
 import android.text.Spanned;
+import android.text.style.DynamicDrawableSpan;
+import android.text.style.ImageSpan;
 import android.text.style.QuoteSpan;
 
 import green_green_avk.anotherterm.R;
@@ -19,6 +21,11 @@ public final class CustomHtml {
                         new CustomQuoteSpan(ctx.getResources().getColor(R.color.colorAccent)),
                         r.getSpanStart(qs), r.getSpanEnd(qs), r.getSpanFlags(qs));
                 ((Spannable) r).removeSpan(qs);
+            }
+            for (final ClipboardSpan cs : r.getSpans(0, source.length(), ClipboardSpan.class)) {
+                ((Spannable) r).setSpan(
+                        new ImageSpan(ctx, R.drawable.ic_mark_copy, DynamicDrawableSpan.ALIGN_BASELINE),
+                        r.getSpanEnd(cs) - 1, r.getSpanEnd(cs), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
         return r;

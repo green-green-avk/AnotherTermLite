@@ -94,20 +94,32 @@ static ssize_t sendFds(const int sockfd, const void *const data, const size_t le
     return TEMP_FAILURE_RETRY(sendmsg(sockfd, &msg, flags));
 }
 
-static struct termios def_mode;
+static bool saved_in = false;
+static struct termios def_mode_in;
+static bool saved_out = false;
+static struct termios def_mode_out;
 
 static void saveMode() {
-    tcgetattr(STDIN_FILENO, &def_mode);
+    if (tcgetattr(STDIN_FILENO, &def_mode_in) == 0) saved_in = true;
+    if (tcgetattr(STDOUT_FILENO, &def_mode_out) == 0) saved_out = true;
 }
 
 static void setRawMode() {
-    struct termios mode = def_mode;
-    cfmakeraw(&mode);
-    tcsetattr(STDIN_FILENO, TCSANOW, &mode);
+    if (saved_in) {
+        struct termios mode_in = def_mode_in;
+        cfmakeraw(&mode_in);
+        tcsetattr(STDIN_FILENO, TCSANOW, &mode_in);
+    }
+    if (saved_out) {
+        struct termios mode_out = def_mode_out;
+        cfmakeraw(&mode_out);
+        tcsetattr(STDOUT_FILENO, TCSANOW, &mode_out);
+    }
 }
 
 static void restoreMode() {
-    tcsetattr(STDIN_FILENO, TCSANOW, &def_mode);
+    if (saved_in) tcsetattr(STDIN_FILENO, TCSANOW, &def_mode_in);
+    if (saved_out) tcsetattr(STDOUT_FILENO, TCSANOW, &def_mode_out);
 }
 
 static void _onExit() {
@@ -164,6 +176,21 @@ int main(const int argc, const char *const *const argv) {
         fprintf(stderr, "Spoofing detected!\n");
         __android_log_write(ANDROID_LOG_ERROR, "termsh", "Spoofing detected!");
         exit(1);
+    }
+    {
+        char buf[PATH_MAX];
+        if (getcwd(buf, sizeof(buf)) == nullptr) {
+            close(sock);
+            perror("Error sending CWD");
+            exit(1);
+        }
+        const size_t l = strlen(buf);
+        const uint32_t _l = htonl(l); // always big-endian
+        if (write(sock, &_l, 4) < 0 || write(sock, buf, l) < 0) {
+            close(sock);
+            perror("Error sending CWD");
+            exit(1);
+        }
     }
     const int fds[] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
     const char _argc = (char) c_argc;

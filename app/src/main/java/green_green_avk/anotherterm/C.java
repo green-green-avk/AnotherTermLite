@@ -16,10 +16,10 @@ public final class C {
     public static final String IFK_MSG_SESS_KEY = BuildConfig.APPLICATION_ID + ".MSG_SESS_KEY";
     public static final String IFK_MSG_SESS_TAIL = BuildConfig.APPLICATION_ID + ".MSG_SESS_TAIL";
     public static final String IFK_MSG_ID = BuildConfig.APPLICATION_ID + ".MSG_ID";
-    public static final String IFK_MSG_MIME = BuildConfig.APPLICATION_ID + ".MSG_MIME";
-    public static final int NOTIFICATION_GROUP_BITS = 4;
-    public static final int NOTIFICATION_SUBID_MASK = (-1) >>> NOTIFICATION_GROUP_BITS;
-    public static final int NOTIFICATION_APPDYN_GROUP = 1 << (Integer.SIZE - NOTIFICATION_GROUP_BITS);
-    public static final int NOTIFICATION_TERMSH_GROUP = 2 << (Integer.SIZE - NOTIFICATION_GROUP_BITS);
+    public static final String IFK_MSG_INTENT = BuildConfig.APPLICATION_ID + ".MSG_INTENT";
+    public static final String IFK_ACTION_NEW = BuildConfig.APPLICATION_ID + ".ACTION_NEW";
+    public static final String IFK_ACTION_CANCEL = BuildConfig.APPLICATION_ID + ".ACTION_CANCEL";
+    public static final String TERMSH_USER_TAG = "TERMSH_USER";
+    public static final String REQUEST_USER_TAG = "REQUEST_USER";
     public static final List<String> charsetList = new ArrayList<>(Charset.availableCharsets().keySet());
 }

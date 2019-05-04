@@ -1,10 +1,12 @@
 package green_green_avk.anotherterm;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.Intent;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
 import android.net.Uri;
@@ -13,16 +15,20 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Process;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.annotation.UiThread;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
+import android.support.v4.content.FileProvider;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
 
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,21 +39,43 @@ import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.CharBuffer;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import green_green_avk.anotherterm.backends.BackendException;
 import green_green_avk.anotherterm.backends.BackendModule;
 import green_green_avk.anotherterm.backends.usbUart.UsbUartModule;
 import green_green_avk.anotherterm.utils.BinaryGetOpts;
+import green_green_avk.anotherterm.utils.BlockingSync;
 import green_green_avk.anotherterm.utils.Misc;
 
 public final class TermSh {
-    private static final String NOTIFICATION_CHANNEL_ID = TermSh.class.getName();
+    private static final String USER_NOTIFICATION_CHANNEL_ID =
+            TermSh.class.getName() + ".user";
+    private static final String REQUEST_NOTIFICATION_CHANNEL_ID =
+            TermSh.class.getName() + ".request";
+
+    private static File getFileWithCWD(@NonNull final String cwd, @NonNull final String fn) {
+        final File f = new File(fn);
+        if (f.isAbsolute()) return f;
+        return new File(cwd, fn);
+    }
+
+    private static void checkFile(@NonNull final File file) throws FileNotFoundException {
+        try {
+            if (!file.exists())
+                throw new FileNotFoundException("No such file");
+            if (file.isDirectory())
+                throw new FileNotFoundException("File is a directory");
+        } catch (final SecurityException e) {
+            throw new FileNotFoundException(e.getMessage());
+        }
+    }
 
     private static final class UiBridge {
         private final Context ctx;
         private final Handler handler;
 
-        private int notificationId = 0;
+        private final AtomicInteger notificationId = new AtomicInteger(0);
 
         @UiThread
         private UiBridge(@NonNull final Context context) {
@@ -60,22 +88,30 @@ public final class TermSh {
         }
 
         private int getNextNotificationId() {
-            return notificationId++;
+            return notificationId.getAndIncrement();
         }
 
-        private void makeNotification(final String message, final int id) {
-            final int _id = id & C.NOTIFICATION_SUBID_MASK | C.NOTIFICATION_TERMSH_GROUP;
+        private void postNotification(final String message, final int id) {
             handler.post(new Runnable() {
                 @Override
                 public void run() {
                     final Notification n = new NotificationCompat.Builder(
-                            ctx.getApplicationContext(), NOTIFICATION_CHANNEL_ID)
+                            ctx.getApplicationContext(), USER_NOTIFICATION_CHANNEL_ID)
                             .setContentTitle(message)
                             .setSmallIcon(R.drawable.ic_stat_serv)
                             .setPriority(NotificationCompat.PRIORITY_HIGH)
                             .setAutoCancel(true)
                             .build();
-                    NotificationManagerCompat.from(ctx).notify(_id, n);
+                    NotificationManagerCompat.from(ctx).notify(C.TERMSH_USER_TAG, id, n);
+                }
+            });
+        }
+
+        private void removeNotification(final int id) {
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    NotificationManagerCompat.from(ctx).cancel(C.TERMSH_USER_TAG, id);
                 }
             });
         }
@@ -85,7 +121,29 @@ public final class TermSh {
         private static final BinaryGetOpts.Options NOTIFY_OPTS =
                 new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
                         new BinaryGetOpts.Option("id", new String[]{"-i", "--id"},
-                                BinaryGetOpts.Option.Type.INT)
+                                BinaryGetOpts.Option.Type.INT),
+                        new BinaryGetOpts.Option("remove", new String[]{"-r", "--remove"},
+                                BinaryGetOpts.Option.Type.NONE)
+                });
+        private static final BinaryGetOpts.Options GET_OPTS =
+                new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
+                        new BinaryGetOpts.Option("notify", new String[]{"-n", "--notify"},
+                                BinaryGetOpts.Option.Type.NONE),
+                        new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
+                                BinaryGetOpts.Option.Type.STRING),
+                });
+        private static final BinaryGetOpts.Options OPEN_OPTS =
+                new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
+                        new BinaryGetOpts.Option("notify", new String[]{"-n", "--notify"},
+                                BinaryGetOpts.Option.Type.NONE),
+                        new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
+                                BinaryGetOpts.Option.Type.NONE),
                 });
 
         private final UiBridge ui;
@@ -96,12 +154,12 @@ public final class TermSh {
         }
 
         private static final class ParseException extends Exception {
-            public ParseException(final String message) {
+            private ParseException(final String message) {
                 super(message);
             }
         }
 
-        private static final class CmdIO {
+        private static final class ShellCmdIO {
             private static final int ARGLEN_MAX = 1024 * 1024;
             private static final byte[][] NOARGS = new byte[0][];
 
@@ -110,10 +168,12 @@ public final class TermSh {
             private final LocalSocket socket;
             private final InputStream cis;
             private final FileDescriptor[] ioFds;
-            public final InputStream stdIn;
-            public final OutputStream stdOut;
-            public final OutputStream stdErr;
-            public final byte[][] args;
+            private final InputStream stdIn;
+            private final OutputStream stdOut;
+            private final OutputStream stdErr;
+            private final String currDir;
+            private final byte[][] args;
+            private volatile Runnable onTerminate = null;
 
             private final Thread cth = new Thread("TermShServer.Control") {
                 @Override
@@ -126,9 +186,35 @@ public final class TermSh {
                     } catch (final IOException e) {
                         Log.e("TermShServer", "Request", e);
                     }
+                    final Runnable ot = onTerminate;
+                    if (ot != null) ot.run();
                     close();
                 }
             };
+
+            // It seems, android.system.Os class is trying to be linked by Dalvik even when inside
+            // appropriate if statement and raises java.lang.VerifyError on the constructor call...
+            // API 19 is affected at least.
+            // Moving to separate class to work it around.
+            @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+            private static final class Utils21 {
+                private Utils21() {
+                }
+
+                private static void close(final FileDescriptor[] fds) {
+                    if (fds != null) {
+                        for (final FileDescriptor fd : fds) {
+                            if (fd.valid()) {
+                                try {
+                                    Os.close(fd);
+                                } catch (final ErrnoException e) {
+                                    Log.e("TermShServer", "Request", e);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             private void close() {
                 synchronized (closeLock) {
@@ -147,15 +233,7 @@ public final class TermSh {
                     } catch (final IOException ignored) {
                     }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-                        if (ioFds != null)
-                            for (final FileDescriptor fd : ioFds)
-                                if (fd.valid()) {
-                                    try {
-                                        Os.close(fd); // For API >= 28
-                                    } catch (final ErrnoException e) {
-                                        Log.e("TermShServer", "Request", e);
-                                    }
-                                }
+                        Utils21.close(ioFds); // For API >= 28
                     try {
                         socket.close();
                     } catch (final IOException ignored) {
@@ -163,15 +241,9 @@ public final class TermSh {
                 }
             }
 
-            /*
-             * Technically, creating an FD owner stream is the best solution here...
-             * Na-ah... It seems, I need to make my own
-             * TODO: implementation of the whole LocalServerSocket / LocalSocket
-             * / FileDescriptor / File*Stream / AsynchronousCloseMonitor
-             * to work it around in API versions >= 28.
-             * Android has no API to implement low-level extensions.
-             */
+            // TODO: ParcelFileDescriptor?
 
+            @NonNull
             private static FileInputStream wrapInputFD(final FileDescriptor fd) {
                 try {
                     return FileInputStream.class
@@ -188,6 +260,7 @@ public final class TermSh {
                 }
             }
 
+            @NonNull
             private static FileOutputStream wrapOutputFD(final FileDescriptor fd) {
                 try {
                     return FileOutputStream.class
@@ -202,6 +275,17 @@ public final class TermSh {
                 } catch (final NoSuchMethodException e) {
                     return new FileOutputStream(fd);
                 }
+            }
+
+            @NonNull
+            private static String parsePwd(@NonNull final InputStream is)
+                    throws IOException, ParseException {
+                final DataInputStream dis = new DataInputStream(is);
+                final int l = dis.readInt();
+                if (l < 0 || l > ARGLEN_MAX) throw new ParseException("Current dir parse error");
+                final byte[] buf = new byte[l];
+                dis.readFully(buf);
+                return Misc.fromUTF8(buf);
             }
 
             @NonNull
@@ -220,7 +304,7 @@ public final class TermSh {
                 return args;
             }
 
-            public void exit(int status) {
+            private void exit(final int status) {
                 try {
                     socket.getOutputStream().write(new byte[]{(byte) status});
                 } catch (final IOException ignored) {
@@ -228,9 +312,11 @@ public final class TermSh {
                 close();
             }
 
-            private CmdIO(@NonNull final LocalSocket socket) throws IOException, ParseException {
+            private ShellCmdIO(@NonNull final LocalSocket socket)
+                    throws IOException, ParseException {
                 this.socket = socket;
                 cis = socket.getInputStream();
+                currDir = parsePwd(cis);
                 args = parseArgs(cis);
                 ioFds = socket.getAncillaryFileDescriptors();
                 if (ioFds == null || ioFds.length != 3)
@@ -247,11 +333,11 @@ public final class TermSh {
             @Override
             protected Object doInBackground(final Object[] objects) {
                 final LocalSocket socket = (LocalSocket) objects[0];
-                final CmdIO shellCmd;
+                final ShellCmdIO shellCmd;
                 try {
                     if (Process.myUid() != socket.getPeerCredentials().getUid())
                         throw new ParseException("Spoofing detected!");
-                    shellCmd = new CmdIO(socket);
+                    shellCmd = new ShellCmdIO(socket);
                 } catch (final IOException | ParseException e) {
                     Log.e("TermShServer", "Request", e);
                     try {
@@ -273,6 +359,12 @@ public final class TermSh {
                             ap.skip();
                             final Map<String, ?> opts = ap.parse(NOTIFY_OPTS);
                             final Integer _id = (Integer) opts.get("id");
+                            if (opts.containsKey("remove")) {
+                                if (_id == null)
+                                    throw new ParseException("What exactly to remove?");
+                                ui.removeNotification(_id);
+                                break;
+                            }
                             final int id = _id == null ? ui.getNextNotificationId() : _id;
                             final String msg;
                             switch (shellCmd.args.length - ap.position) {
@@ -280,11 +372,12 @@ public final class TermSh {
                                     msg = Misc.fromUTF8(shellCmd.args[ap.position]);
                                     break;
                                 case 0: {
-                                    final Reader reader = new InputStreamReader(shellCmd.stdIn, Misc.UTF8);
+                                    final Reader reader =
+                                            new InputStreamReader(shellCmd.stdIn, Misc.UTF8);
                                     final CharBuffer buf = CharBuffer.allocate(8192);
                                     String m = "";
                                     while (true) {
-                                        ui.makeNotification(m, id);
+                                        ui.postNotification(m, id);
                                         if (reader.read(buf) < 0) break;
                                         if (buf.remaining() < 2) { // TODO: correct
                                             buf.position(buf.limit() / 2);
@@ -298,15 +391,203 @@ public final class TermSh {
                                 default:
                                     throw new ParseException("Bad arguments");
                             }
-                            ui.makeNotification(msg, id);
+                            ui.postNotification(msg, id);
+                            break;
+                        }
+                        case "view":
+                        case "edit": {
+                            final boolean writeable = "edit".equals(command);
+                            final BinaryGetOpts.Parser ap = new BinaryGetOpts.Parser(shellCmd.args);
+                            ap.skip();
+                            final Map<String, ?> opts = ap.parse(OPEN_OPTS);
+                            String mime = (String) opts.get("mime");
+                            String title = (String) opts.get("title");
+                            if (title == null) title = "Pick application";
+                            if (shellCmd.args.length - ap.position == 1) {
+                                final String filename =
+                                        Misc.fromUTF8(shellCmd.args[ap.position]);
+                                final Uri uri;
+                                if (opts.containsKey("uri")) {
+                                    uri = Uri.parse(filename);
+                                } else {
+                                    final File file = getFileWithCWD(shellCmd.currDir, filename);
+                                    checkFile(file);
+                                    try {
+                                        uri = FileProvider.getUriForFile(ui.ctx,
+                                                BuildConfig.APPLICATION_ID + ".fileprovider",
+                                                file);
+                                    } catch (final IllegalArgumentException e) {
+                                        throw new FileNotFoundException(e.getMessage());
+                                    }
+                                }
+                                final Intent i = new Intent(writeable ?
+                                        Intent.ACTION_EDIT : Intent.ACTION_VIEW);
+                                i.setDataAndType(uri, mime);
+                                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        | (writeable ?
+                                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION : 0));
+                                if (opts.containsKey("notify"))
+                                    RequesterActivity.showAsNotification(ui.ctx,
+                                            Intent.createChooser(i, title),
+                                            ui.ctx.getString(R.string.title_shell_of_s,
+                                                    ui.ctx.getString(R.string.app_name)),
+                                            title + " (" + filename + ")",
+                                            REQUEST_NOTIFICATION_CHANNEL_ID,
+                                            NotificationCompat.PRIORITY_HIGH);
+                                else
+                                    ui.ctx.startActivity(Intent.createChooser(i, title)
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                            } else {
+                                throw new ParseException("Bad arguments");
+                            }
+                            break;
+                        }
+                        case "send": {
+                            final BinaryGetOpts.Parser ap = new BinaryGetOpts.Parser(shellCmd.args);
+                            ap.skip();
+                            final Map<String, ?> opts = ap.parse(OPEN_OPTS);
+                            String mime = (String) opts.get("mime");
+                            if (mime == null) mime = "*/*";
+                            String title = (String) opts.get("title");
+                            if (title == null) title = "Pick destination";
+                            final String name;
+                            final Uri uri;
+                            final BlockingSync<Object> result = new BlockingSync<>();
+                            switch (shellCmd.args.length - ap.position) {
+                                case 1: {
+                                    result.set(null);
+                                    name = Misc.fromUTF8(shellCmd.args[ap.position]);
+                                    if (opts.containsKey("uri")) {
+                                        uri = Uri.parse(name);
+                                    } else {
+                                        final File file = getFileWithCWD(shellCmd.currDir, name);
+                                        checkFile(file);
+                                        try {
+                                            uri = FileProvider.getUriForFile(ui.ctx,
+                                                    BuildConfig.APPLICATION_ID + ".fileprovider",
+                                                    file);
+                                        } catch (final IllegalArgumentException e) {
+                                            throw new FileNotFoundException(e.getMessage());
+                                        }
+                                    }
+                                    break;
+                                }
+                                case 0: {
+                                    name = "Stream";
+                                    uri = StreamProvider.getUri(shellCmd.stdIn, mime,
+                                            new StreamProvider.OnResult() {
+                                                @Override
+                                                public void onResult(final Object msg) {
+                                                    result.set(null);
+                                                }
+                                            });
+                                    break;
+                                }
+                                default:
+                                    throw new ParseException("Bad arguments");
+                            }
+                            final Intent i = new Intent(Intent.ACTION_SEND);
+                            i.setType(mime);
+                            i.putExtra(Intent.EXTRA_STREAM, uri);
+                            if (opts.containsKey("notify"))
+                                RequesterActivity.showAsNotification(ui.ctx,
+                                        Intent.createChooser(i, title),
+                                        ui.ctx.getString(R.string.title_shell_of_s,
+                                                ui.ctx.getString(R.string.app_name)),
+                                        title + " (" + name + ")",
+                                        REQUEST_NOTIFICATION_CHANNEL_ID,
+                                        NotificationCompat.PRIORITY_HIGH);
+                            else
+                                ui.ctx.startActivity(Intent.createChooser(i, title)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                            // Wait here
+                            shellCmd.onTerminate = new Runnable() {
+                                @Override
+                                public void run() {
+                                    result.set(null);
+                                }
+                            };
+                            result.get();
+                            shellCmd.onTerminate = null;
+                            // ===
+                            break;
+                        }
+                        case "get": {
+                            final BinaryGetOpts.Parser ap = new BinaryGetOpts.Parser(shellCmd.args);
+                            ap.skip();
+                            final Map<String, ?> opts = ap.parse(GET_OPTS);
+                            String mime = (String) opts.get("mime");
+                            if (mime == null) mime = "*/*";
+                            String title = (String) opts.get("title");
+                            if (title == null) title = "Pick document";
+                            final BlockingSync<Intent> r = new BlockingSync<>();
+                            final Intent i = new Intent(Intent.ACTION_GET_CONTENT)
+                                    .addCategory(Intent.CATEGORY_OPENABLE).setType(mime);
+                            final RequesterActivity.OnResult onResult = new RequesterActivity.OnResult() {
+                                @Override
+                                public void onResult(@Nullable Intent result) {
+                                    r.setIfIsNotSet(result);
+                                }
+                            };
+                            final RequesterActivity.Request request = opts.containsKey("notify") ?
+                                    RequesterActivity.request(
+                                            ui.ctx, Intent.createChooser(i, title), onResult,
+                                            ui.ctx.getString(R.string.title_shell_of_s,
+                                                    ui.ctx.getString(R.string.app_name)),
+                                            title, REQUEST_NOTIFICATION_CHANNEL_ID,
+                                            NotificationCompat.PRIORITY_HIGH) :
+                                    RequesterActivity.request(
+                                            ui.ctx, Intent.createChooser(i, title), onResult);
+                            // Wait here
+                            shellCmd.onTerminate = new Runnable() {
+                                @Override
+                                public void run() {
+                                    request.cancel();
+                                }
+                            };
+                            final Intent ri = r.get();
+                            shellCmd.onTerminate = null;
+                            // ===
+                            if (ri != null) {
+                                final Uri uri = ri.getData();
+                                if (uri != null) {
+                                    shellCmd.stdOut.write(Misc.toUTF8(uri.toString()));
+                                    break;
+                                }
+                            }
+                            shellCmd.exit(1);
+                            return null;
+                        }
+                        case "cat": {
+                            if (shellCmd.args.length != 2)
+                                throw new ParseException("Wrong number of arguments");
+                            final Uri uri = Uri.parse(Misc.fromUTF8(shellCmd.args[1]));
+                            final InputStream is =
+                                    ui.ctx.getContentResolver().openInputStream(uri);
+                            if (is == null) {
+                                // Asset
+                                throw new FileNotFoundException("Something not found");
+                            }
+                            final byte[] buf = new byte[8192];
+                            try {
+                                while (true) {
+                                    final int r = is.read(buf);
+                                    if (r < 0) break;
+                                    shellCmd.stdOut.write(buf, 0, r);
+                                }
+                            } finally {
+                                is.close();
+                            }
                             break;
                         }
                         case "serial": {
-                            if (shellCmd.args.length != 2)
+                            if (shellCmd.args.length > 2)
                                 throw new ParseException("Wrong number of arguments");
                             final Map<String, ?> params
-                                    = UsbUartModule.meta.fromUri(Uri.parse(
-                                    "uart:/" + Misc.fromUTF8(shellCmd.args[1])));
+                                    = shellCmd.args.length == 2
+                                    ? UsbUartModule.meta.fromUri(Uri.parse(
+                                    "uart:/" + Misc.fromUTF8(shellCmd.args[1])))
+                                    : null;
                             final BackendModule be = new UsbUartModule();
                             be.setContext(ui.ctx);
                             be.setOnMessageListener(new BackendModule.OnMessageListener() {
@@ -325,7 +606,7 @@ public final class TermSh {
                             be.setOutputStream(shellCmd.stdOut);
                             final OutputStream toBe = be.getOutputStream();
                             try {
-                                be.setParameters(params);
+                                if (params != null) be.setParameters(params);
                                 be.connect();
                                 final byte[] buf = new byte[8192];
                                 try {
@@ -351,7 +632,8 @@ public final class TermSh {
                             throw new ParseException("Unknown command");
                     }
                     shellCmd.exit(0);
-                } catch (final IOException | ParseException | BinaryGetOpts.ParseException e) {
+                } catch (final InterruptedException |
+                        IOException | ParseException | BinaryGetOpts.ParseException e) {
                     try {
                         shellCmd.stdErr.write(Misc.toUTF8(e.getMessage() + "\n"));
                         shellCmd.exit(1);
@@ -379,6 +661,10 @@ public final class TermSh {
             } catch (final IOException e) {
                 Log.e("TermShServer", "IO", e);
             }
+            try {
+                serverSocket.close();
+            } catch (IOException ignored) {
+            }
         }
     }
 
@@ -389,13 +675,21 @@ public final class TermSh {
     @UiThread
     public TermSh(@NonNull final Context context) {
 
-        final NotificationChannel nc;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            nc = new NotificationChannel(NOTIFICATION_CHANNEL_ID,
-                    context.getString(R.string.app_name) + " Shell",
-                    NotificationManager.IMPORTANCE_HIGH);
-            ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE))
-                    .createNotificationChannel(nc);
+            final NotificationManager nm =
+                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            nm.createNotificationChannel(new NotificationChannel(
+                    USER_NOTIFICATION_CHANNEL_ID,
+                    context.getString(R.string.title_shell_of_s,
+                            context.getString(R.string.app_name)),
+                    NotificationManager.IMPORTANCE_HIGH
+            ));
+            nm.createNotificationChannel(new NotificationChannel(
+                    REQUEST_NOTIFICATION_CHANNEL_ID,
+                    context.getString(R.string.title_shell_script_request_of_s,
+                            context.getString(R.string.app_name)),
+                    NotificationManager.IMPORTANCE_HIGH
+            ));
         }
 
         ui = new UiBridge(context);

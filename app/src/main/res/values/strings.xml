@@ -70,14 +70,14 @@
     <string name="msg_name_must_not_be_empty">Name must not be empty</string>
     <string name="license">License</string>
     <string name="conntype_local">Local Terminal</string>
-    <string name="info">Info</string>
+    <string name="title_info">Info</string>
     <string name="desc_not_found"><![CDATA[<h1>Not Found</h1>]]></string>
     <string name="desc_local_param_execute"><![CDATA[
         If the field is empty, <b>`/system/bin/sh -l\'</b> will be executed;<br>
         <b>`/system/bin/sh -l -c &lt;command&gt;\'</b> otherwise.
         <p>Commands:
         <ul>
-        <li><clipboard>$LIB_DIR/libtermsh.so</clipboard> - a tool to use Android functionality from
+        <li><clipboard>$LIB_DIR/libtermsh.so</clipboard> &#x2014; a tool to use Android functionality from
         the shell.
         Use `help\' argument for <a href="infores:termsh_man">details</a>.</li>
         </ul></p>
@@ -88,6 +88,8 @@
         data directory (set if available)</li>
         <li><clipboard>EXTERNAL_DATA_DIR</clipboard> &#x2014; external persistent data directory
         (set if available)</li>
+        <li><clipboard>LIB_DIR</clipboard> &#x2014; native binaries path</li>
+        <li><clipboard>APP_ID</clipboard> &#x2014; application id</li>
         <ul/></p>
     ]]></string>
     <string name="example_local_param_execute">export TERMSH=\"$LIB_DIR/libtermsh.so\" ; cd $DATA_DIR ; sh</string>
@@ -101,4 +103,7 @@
     <string name="msg_nothing_to_copy_to_clipboard">Nothing to copy to clipboard</string>
     <string name="keymap_title_s_q_not_defined_here_q">%s (not defined here)</string>
     <string name="keymap_title_default">Default</string>
+    <string name="title_shell_of_s">%s Shell</string>
+    <string name="title_shell_script_request_of_s">%s Shell: Script Request</string>
+    <string name="title_about">About</string>
 </resources>

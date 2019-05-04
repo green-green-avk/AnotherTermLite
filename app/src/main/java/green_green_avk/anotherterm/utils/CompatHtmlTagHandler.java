@@ -1,28 +1,20 @@
 package green_green_avk.anotherterm.utils;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
-import android.support.annotation.NonNull;
 import android.text.Editable;
 import android.text.Html;
 import android.text.Spanned;
 import android.text.style.BulletSpan;
-import android.text.style.ClickableSpan;
 import android.text.style.LeadingMarginSpan;
-import android.view.View;
-import android.widget.Toast;
 
 import org.xml.sax.XMLReader;
 
 import java.util.Stack;
 
-import green_green_avk.anotherterm.R;
-
 // TODO: correct
 // https://stackoverflow.com/questions/44259072/leadingmarginspan-not-indented-correctly-for-multilevel-nested-bullets
 // It seems actual for API < 24 only.
 public final class CompatHtmlTagHandler implements Html.TagHandler {
+
     private final Stack<Object> lists = new Stack<>();
     private final Stack<LeadingMarginSpan> lis = new Stack<>();
     private int cbtStart = 0;
@@ -82,20 +74,10 @@ public final class CompatHtmlTagHandler implements Html.TagHandler {
                     break;
                 }
                 case "clipboard": {
+                    output.append('\u2398');
                     final String content = output.subSequence(cbtStart, output.length()).toString();
-                    output.setSpan(new ClickableSpan() {
-                        @Override
-                        public void onClick(@NonNull final View widget) {
-                            final ClipboardManager clipboard =
-                                    (ClipboardManager) widget.getContext()
-                                            .getSystemService(Context.CLIPBOARD_SERVICE);
-                            if (clipboard == null) return;
-                            clipboard.setPrimaryClip(ClipData.newPlainText(
-                                    null, content));
-                            Toast.makeText(widget.getContext(), R.string.msg_copied_to_clipboard,
-                                    Toast.LENGTH_SHORT).show();
-                        }
-                    }, cbtStart, output.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    output.setSpan(new ClipboardSpan(content),
+                            cbtStart, output.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     break;
                 }
             }

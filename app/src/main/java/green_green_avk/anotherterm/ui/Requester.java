@@ -35,7 +35,8 @@ public abstract class Requester {
 
     @UiThread
     @NonNull
-    protected static <T extends UiFragment> T prepare(@NonNull final Context ctx, @NonNull final T fragment) {
+    protected static <T extends UiFragment> T prepare(@NonNull final Context ctx,
+                                                      @NonNull final T fragment) {
         final FragmentActivity a = (FragmentActivity) ctx;
         final FragmentManager m = a.getSupportFragmentManager();
         m.beginTransaction().add(fragment, UiFragment.TAG).commitNow();

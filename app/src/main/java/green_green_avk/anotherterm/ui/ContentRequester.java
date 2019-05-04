@@ -27,7 +27,7 @@ public final class ContentRequester extends Requester {
     public static final class UIFragment extends Requester.UiFragment {
         private final int requestCode = generateRequestCode();
 
-        private BlockingSync<?> result = null; // TODO: Add file descriptor request
+        private BlockingSync<?> result = null;
         private Type type = null;
 
         @Override

@@ -11,6 +11,7 @@ import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import green_green_avk.anotherterm.BuildConfig;
 import green_green_avk.anotherterm.backends.BackendModule;
 import green_green_avk.ptyprocess.PtyProcess;
 
@@ -126,6 +127,7 @@ public final class LocalModule extends BackendModule {
         if (extDataDir != null)
             env.put("EXTERNAL_DATA_DIR", extDataDir.getAbsolutePath());
         env.put("LIB_DIR", context.getApplicationInfo().nativeLibraryDir);
+        env.put("APP_ID", BuildConfig.APPLICATION_ID);
         synchronized (connectionLock) {
             proc = PtyProcess.system(execute, env);
             readerThread = new Thread(new ProcOutputR(proc.getInputStream()));

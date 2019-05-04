@@ -84,14 +84,34 @@
             android:exported="true"
             tools:ignore="ExportedContentProvider" />
 
+        <provider
+            android:name="android.support.v4.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <provider
+            android:name=".StreamProvider"
+            android:authorities="${applicationId}.streamprovider"
+            android:exported="false"
+            android:grantUriPermissions="true"></provider>
+
+        <activity
+            android:name=".RequesterActivity"
+            android:label="Select" />
+
         <activity
             android:name=".AboutActivity"
-            android:label="@string/action_about"
+            android:label="@string/title_about"
             android:parentActivityName=".SessionsActivity" />
         <activity
             android:name=".InfoActivity"
             android:exported="false"
-            android:label="@string/info"
+            android:label="@string/title_info"
             tools:ignore="AppLinkUrlError">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="desc_termsh_help"><![CDATA[
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="desc_termsh_help" tools:ignore="TypographyDashes,TypographyEllipsis"><![CDATA[
 \
     USAGE:
 
-    termsh [-r|--raw] <command> [<arg>]...
+    $TERMSH [-r|--raw] <command> [<arg>]...
 
       -r|--raw - raw mode as set by cfmakeraw().
         (Beware, Ctrl-C etc. are not captured by the terminal in this mode.)
@@ -17,12 +17,43 @@
         This message.
 
 
-    * notify [-i|--id] [<message>]
+    * notify [-i|--id <id>] [<message>]
+      notify -r|--remove -i|--id <id>
 
         Display notification,
         stdin will be used if no message argument provided.
 
-        -i|--id - notification id
+        -i|--id <id> - notification id
+
+        -r|--remove - remove notification by id
+
+
+    * [view|edit] [-n|--notify] [-m|--meta <meta>] [-t|--title <title>] [-u|--uri] <file|uri>
+
+        Open for view / edit with appropriate temporary access rights.
+
+        -u|--uri - use uri instead of file
+
+
+    * send [-n|--notify] [-m|--meta <meta>] [-t|--title <title>] [-u|--uri] [<file|uri>]
+
+        Send (android.intent.action.SEND). If no `file\' argument is specified, stdin is used.
+
+        -u|--uri - use uri instead of file
+
+
+    * get [-n|--notify] [-m|--meta <meta>] [-t|--title <title>]
+
+        Show document picker dialog and URI to stdout.
+
+        Example: $TERMSH cat `$TERMSH get` > some_file
+
+
+    * cat <URI>
+
+        Copy specified Android URI content to the stdout.
+
+        Example: $TERMSH cat content://$APP_ID.linksprovider/html/some_url_to_be_wrapped_into_html
 
 
     * serial [<baudrate>[/<databits>[/<stopbits>[/<parity>[/<flowcontrol>]]]]]

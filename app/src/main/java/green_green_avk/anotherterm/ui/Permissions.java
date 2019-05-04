@@ -16,19 +16,22 @@ public final class Permissions extends Requester {
         public BlockingSync<int[]> result = null;
 
         @Override
-        public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                               @NonNull int[] grantResults) {
             if (requestCode != REQUEST_CODE) return;
             recycle();
             result.set(grantResults);
         }
 
-        public void requestPermissions(@NonNull final BlockingSync<int[]> result, @NonNull final String[] perms) {
+        public void requestPermissions(@NonNull final BlockingSync<int[]> result,
+                                       @NonNull final String[] perms) {
             this.result = result;
             requestPermissions(perms, REQUEST_CODE);
         }
     }
 
-    public static void request(@NonNull final BlockingSync<int[]> result, @NonNull final Context ctx, @NonNull final String[] perms) {
+    public static void request(@NonNull final BlockingSync<int[]> result,
+                               @NonNull final Context ctx, @NonNull final String[] perms) {
         if (perms.length == 0) {
             result.set(new int[0]);
             return;
@@ -44,7 +47,8 @@ public final class Permissions extends Requester {
     protected static final Object requestBlockingLock = new Object();
 
     @NonNull
-    public static int[] requestBlocking(@NonNull final Context ctx, @NonNull final String[] perms) throws InterruptedException {
+    public static int[] requestBlocking(@NonNull final Context ctx, @NonNull final String[] perms)
+            throws InterruptedException {
         if (perms.length == 0) return new int[0];
         synchronized (requestBlockingLock) {
             final BlockingSync<int[]> r = new BlockingSync<>();

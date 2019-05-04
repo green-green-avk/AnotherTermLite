@@ -19,6 +19,10 @@ public final class BlockingSync<T> {
         mIsSet = true;
     }
 
+    public synchronized void setIfIsNotSet(final T value) {
+        if (!isSet()) set(value);
+    }
+
     public synchronized void clear() {
         mIsSet = false;
         mValue = null;

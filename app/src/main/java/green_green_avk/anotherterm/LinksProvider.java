@@ -2,7 +2,9 @@ package green_green_avk.anotherterm;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.UriMatcher;
+import android.content.pm.ProviderInfo;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
@@ -18,17 +20,25 @@ import java.io.IOException;
 import java.util.Locale;
 
 public final class LinksProvider extends ContentProvider {
-    private static final String AUTHORITY = BuildConfig.APPLICATION_ID + ".linksprovider";
-    private static final UriMatcher MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
     private static final int CODE_LINK_HTML = 1;
 
-    static {
-        MATCHER.addURI(AUTHORITY, "/html/*", CODE_LINK_HTML);
-    }
+    private static LinksProvider instance = null;
+
+    private String authority = null;
+    private final UriMatcher matcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     private String contentTitle = null;
     private String contentFilename = null;
     private String contentFmt = null;
+
+    public static Uri getHtmlWithLink(@NonNull final Uri uri) {
+        return getHtmlWithLink(uri.toString());
+    }
+
+    public static Uri getHtmlWithLink(@NonNull final String link) {
+        if (instance == null) return null;
+        return Uri.parse("content://" + instance.authority + "/html/" + Uri.encode(link));
+    }
 
     @Override
     public boolean onCreate() {
@@ -39,38 +49,39 @@ public final class LinksProvider extends ContentProvider {
         return true;
     }
 
-    public static Uri getHtmlWithLink(@NonNull final Uri uri) {
-        return getHtmlWithLink(uri.toString());
-    }
-
-    public static Uri getHtmlWithLink(@NonNull final String link) {
-        return Uri.parse("content://" + AUTHORITY + "/html/" + Uri.encode(link));
+    @Override
+    public void attachInfo(final Context context, final ProviderInfo info) {
+        super.attachInfo(context, info);
+        authority = info.authority;
+        matcher.addURI(authority, "/html/*", CODE_LINK_HTML);
+        instance = this;
     }
 
     @Override
-    public int delete(@NonNull Uri uri, String selection, String[] selectionArgs) {
-        throw new UnsupportedOperationException("Not yet implemented");
+    public int delete(@NonNull final Uri uri, final String selection,
+                      final String[] selectionArgs) {
+        throw new UnsupportedOperationException("Not supported");
     }
 
     @Nullable
     @Override
-    public String getType(@NonNull Uri uri) {
+    public String getType(@NonNull final Uri uri) {
         return "text/html";
     }
 
     @Nullable
     @Override
-    public String[] getStreamTypes(@NonNull Uri uri, @NonNull String mimeTypeFilter) {
+    public String[] getStreamTypes(@NonNull final Uri uri, @NonNull final String mimeTypeFilter) {
         return new String[]{"text/html"};
     }
 
     @Override
-    public Uri insert(@NonNull Uri uri, ContentValues values) {
-        throw new UnsupportedOperationException("Not yet implemented");
+    public Uri insert(@NonNull final Uri uri, final ContentValues values) {
+        throw new UnsupportedOperationException("Not supported");
     }
 
     @NonNull
-    private Uri getTargetUri(@NonNull final Uri uri) {
+    private static Uri getTargetUri(@NonNull final Uri uri) {
         return Uri.parse(uri.getLastPathSegment());
     }
 
@@ -82,20 +93,23 @@ public final class LinksProvider extends ContentProvider {
 
     private final PipeDataWriter<String> streamWriter = new PipeDataWriter<String>() {
         @Override
-        public void writeDataToPipe(@NonNull ParcelFileDescriptor output, @NonNull Uri uri, @NonNull String mimeType, @Nullable Bundle opts, @Nullable String args) {
-            final FileOutputStream s = new FileOutputStream(output.getFileDescriptor());
+        public void writeDataToPipe(@NonNull final ParcelFileDescriptor output,
+                                    @NonNull final Uri uri, @NonNull final String mimeType,
+                                    @Nullable final Bundle opts, @Nullable final String args) {
+            final FileOutputStream os = new FileOutputStream(output.getFileDescriptor());
             try {
-                s.write(buildContent(getTargetUri(uri)));
-            } catch (IOException ignored) {
+                os.write(buildContent(getTargetUri(uri)));
+            } catch (final IOException ignored) {
             }
         }
     };
 
     @Nullable
     @Override
-    public ParcelFileDescriptor openFile(@NonNull Uri uri, @NonNull String mode) throws FileNotFoundException {
+    public ParcelFileDescriptor openFile(@NonNull final Uri uri, @NonNull final String mode)
+            throws FileNotFoundException {
 //        Log.d("QUERY", String.format(Locale.ROOT, "[%s] %s", uri, mode));
-        switch (MATCHER.match(uri)) {
+        switch (matcher.match(uri)) {
             case CODE_LINK_HTML: {
                 return openPipeHelper(uri, "text/html", null, null, streamWriter);
             }
@@ -104,10 +118,10 @@ public final class LinksProvider extends ContentProvider {
     }
 
     @Override
-    public Cursor query(@NonNull Uri uri, String[] projection, String selection,
-                        String[] selectionArgs, String sortOrder) {
+    public Cursor query(@NonNull final Uri uri, final String[] projection, final String selection,
+                        final String[] selectionArgs, final String sortOrder) {
 //        Log.d("QUERY", String.format(Locale.ROOT, "[%s] {%s}", uri, Arrays.toString(projection)));
-        switch (MATCHER.match(uri)) {
+        switch (matcher.match(uri)) {
             case CODE_LINK_HTML: {
                 final Uri targetUri = getTargetUri(uri);
                 final MatrixCursor cursor =
@@ -124,8 +138,8 @@ public final class LinksProvider extends ContentProvider {
     }
 
     @Override
-    public int update(@NonNull Uri uri, ContentValues values, String selection,
+    public int update(@NonNull final Uri uri, final ContentValues values, final String selection,
                       String[] selectionArgs) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        throw new UnsupportedOperationException("Not supported");
     }
 }

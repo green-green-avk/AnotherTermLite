@@ -63,39 +63,38 @@ public final class BinaryGetOpts {
             final Map<String, Object> ret = new HashMap<>();
             for (; position < args.length; ++position) {
                 final byte[] arg = args[position];
-                if (arg.length <= options.maxNameLength) {
-                    final String strArg = Misc.fromUTF8(arg);
-                    final Option opt = options.get(strArg);
-                    if (opt == null) break;
-                    final Object val;
-                    if (opt.type == Option.Type.NONE) {
-                        val = true;
-                    } else if (position + 1 < args.length) {
-                        ++position;
-                        switch (opt.type) {
-                            case STRING:
-                                val = Misc.fromUTF8(args[position]);
-                                break;
-                            case INT:
-                                try {
-                                    val = Integer.parseInt(Misc.fromUTF8(args[position]));
-                                } catch (final NumberFormatException e) {
-                                    throw new ParseException(String.format(
-                                            "%s argument is not an integer", strArg));
-                                }
-                                break;
-                            case BIN:
-                                val = args[position];
-                                break;
-                            default:
-                                val = null;
-                        }
-                    } else {
-                        throw new ParseException(String.format(
-                                "%s argument value is missing", strArg));
+                if (arg.length > options.maxNameLength) break;
+                final String strArg = Misc.fromUTF8(arg);
+                final Option opt = options.get(strArg);
+                if (opt == null) break;
+                final Object val;
+                if (opt.type == Option.Type.NONE) {
+                    val = true;
+                } else if (position + 1 < args.length) {
+                    ++position;
+                    switch (opt.type) {
+                        case STRING:
+                            val = Misc.fromUTF8(args[position]);
+                            break;
+                        case INT:
+                            try {
+                                val = Integer.parseInt(Misc.fromUTF8(args[position]));
+                            } catch (final NumberFormatException e) {
+                                throw new ParseException(String.format(
+                                        "%s argument is not an integer", strArg));
+                            }
+                            break;
+                        case BIN:
+                            val = args[position];
+                            break;
+                        default:
+                            val = null;
                     }
-                    ret.put(opt.key, val);
+                } else {
+                    throw new ParseException(String.format(
+                            "%s argument value is missing", strArg));
                 }
+                ret.put(opt.key, val);
             }
             return ret;
         }
