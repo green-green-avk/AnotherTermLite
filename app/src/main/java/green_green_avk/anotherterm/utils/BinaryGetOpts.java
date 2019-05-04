@@ -63,8 +63,12 @@ public final class BinaryGetOpts {
             final Map<String, Object> ret = new HashMap<>();
             for (; position < args.length; ++position) {
                 final byte[] arg = args[position];
-                if (arg.length > options.maxNameLength) break;
+                if (arg.length > options.maxNameLength) break; // ASCII only
                 final String strArg = Misc.fromUTF8(arg);
+                if ("--".equals(strArg)) {
+                    ++position;
+                    break;
+                }
                 final Option opt = options.get(strArg);
                 if (opt == null) break;
                 final Object val;

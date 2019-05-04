@@ -7,6 +7,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
 import android.net.Uri;
@@ -14,6 +15,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Process;
+import android.provider.OpenableColumns;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.UiThread;
@@ -61,14 +63,10 @@ public final class TermSh {
     }
 
     private static void checkFile(@NonNull final File file) throws FileNotFoundException {
-        try {
-            if (!file.exists())
-                throw new FileNotFoundException("No such file");
-            if (file.isDirectory())
-                throw new FileNotFoundException("File is a directory");
-        } catch (final SecurityException e) {
-            throw new FileNotFoundException(e.getMessage());
-        }
+        if (!file.exists())
+            throw new FileNotFoundException("No such file");
+        if (file.isDirectory())
+            throw new FileNotFoundException("File is a directory");
     }
 
     private static final class UiBridge {
@@ -125,7 +123,20 @@ public final class TermSh {
                         new BinaryGetOpts.Option("remove", new String[]{"-r", "--remove"},
                                 BinaryGetOpts.Option.Type.NONE)
                 });
-        private static final BinaryGetOpts.Options GET_OPTS =
+        private static final BinaryGetOpts.Options COPY_OPTS =
+                new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
+                        new BinaryGetOpts.Option("from-path", new String[]{"-fp", "--from-path"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("from-uri", new String[]{"-fu", "--from-uri"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("to-path", new String[]{"-tp", "--to-path"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("to-uri", new String[]{"-tu", "--to-uri"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("force", new String[]{"-f", "--force"},
+                                BinaryGetOpts.Option.Type.NONE)
+                });
+        private static final BinaryGetOpts.Options PICK_OPTS =
                 new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
                         new BinaryGetOpts.Option("notify", new String[]{"-n", "--notify"},
                                 BinaryGetOpts.Option.Type.NONE),
@@ -133,6 +144,10 @@ public final class TermSh {
                                 BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
                                 BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
+                                BinaryGetOpts.Option.Type.NONE),
+                        new BinaryGetOpts.Option("force", new String[]{"-f", "--force"},
+                                BinaryGetOpts.Option.Type.NONE)
                 });
         private static final BinaryGetOpts.Options OPEN_OPTS =
                 new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
@@ -143,7 +158,7 @@ public final class TermSh {
                         new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
                                 BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
-                                BinaryGetOpts.Option.Type.NONE),
+                                BinaryGetOpts.Option.Type.NONE)
                 });
 
         private final UiBridge ui;
@@ -168,9 +183,13 @@ public final class TermSh {
             private final LocalSocket socket;
             private final InputStream cis;
             private final FileDescriptor[] ioFds;
+            @NonNull
             private final InputStream stdIn;
+            @NonNull
             private final OutputStream stdOut;
+            @NonNull
             private final OutputStream stdErr;
+            @NonNull
             private final String currDir;
             private final byte[][] args;
             private volatile Runnable onTerminate = null;
@@ -328,6 +347,47 @@ public final class TermSh {
             }
         }
 
+        @NonNull
+        private InputStream openInputStream(@NonNull final Uri uri) throws FileNotFoundException {
+            final InputStream is = ui.ctx.getContentResolver().openInputStream(uri);
+            if (is == null) {
+                // Asset
+                throw new FileNotFoundException(uri.toString() + " does not exist");
+            }
+            return is;
+        }
+
+        @NonNull
+        private OutputStream openOutputStream(@NonNull final Uri uri) throws FileNotFoundException {
+            final OutputStream os = ui.ctx.getContentResolver().openOutputStream(uri);
+            if (os == null) {
+                // Asset
+                throw new FileNotFoundException(uri.toString() + " does not exist");
+            }
+            return os;
+        }
+
+        @Nullable
+        private String deduceName(@NonNull final Uri uri) {
+            return uri.getLastPathSegment();
+        }
+
+        @Nullable
+        private String getName(@NonNull final Uri uri) {
+            final Cursor c = ui.ctx.getContentResolver().query(uri,
+                    new String[]{OpenableColumns.DISPLAY_NAME},
+                    null, null, null);
+            if (c == null) return deduceName(uri);
+            try {
+                c.moveToFirst();
+                return c.getString(c.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+            } catch (final Throwable e) {
+                return deduceName(uri);
+            } finally {
+                c.close();
+            }
+        }
+
         @SuppressLint("StaticFieldLeak")
         private final class ClientTask extends AsyncTask<Object, Object, Object> {
             @Override
@@ -347,6 +407,7 @@ public final class TermSh {
                     return null;
                 }
                 try {
+                    int exitStatus = 0;
                     if (shellCmd.args.length < 1) throw new ParseException("No command specified");
                     final String command = Misc.fromUTF8(shellCmd.args[0]);
                     switch (command) {
@@ -512,23 +573,59 @@ public final class TermSh {
                             // ===
                             break;
                         }
-                        case "get": {
+                        case "pick": {
                             final BinaryGetOpts.Parser ap = new BinaryGetOpts.Parser(shellCmd.args);
                             ap.skip();
-                            final Map<String, ?> opts = ap.parse(GET_OPTS);
+                            final Map<String, ?> opts = ap.parse(PICK_OPTS);
                             String mime = (String) opts.get("mime");
                             if (mime == null) mime = "*/*";
                             String title = (String) opts.get("title");
                             if (title == null) title = "Pick document";
+
+                            OutputStream output;
+                            final File outputFile;
+                            switch (shellCmd.args.length - ap.position) {
+                                case 0:
+                                    output = shellCmd.stdOut;
+                                    outputFile = null;
+                                    break;
+                                case 1: {
+                                    output = null;
+                                    final String name = Misc.fromUTF8(shellCmd.args[ap.position]);
+                                    final File f = getFileWithCWD(shellCmd.currDir, name);
+                                    if (f.isDirectory()) {
+                                        outputFile = f;
+                                    } else if (f.exists()) {
+                                        if (!opts.containsKey("force")) {
+                                            throw new ParseException("File already exists");
+                                        }
+                                        outputFile = f;
+                                    } else {
+                                        final File pf = f.getParentFile();
+                                        if (pf == null || !pf.isDirectory()) {
+                                            throw new ParseException("Directory is does not exist");
+                                        }
+                                        outputFile = pf;
+                                    }
+                                    if (!outputFile.canWrite()) {
+                                        throw new ParseException("Write access denied");
+                                    }
+                                    break;
+                                }
+                                default:
+                                    throw new ParseException("Bad arguments");
+                            }
+
                             final BlockingSync<Intent> r = new BlockingSync<>();
                             final Intent i = new Intent(Intent.ACTION_GET_CONTENT)
                                     .addCategory(Intent.CATEGORY_OPENABLE).setType(mime);
-                            final RequesterActivity.OnResult onResult = new RequesterActivity.OnResult() {
-                                @Override
-                                public void onResult(@Nullable Intent result) {
-                                    r.setIfIsNotSet(result);
-                                }
-                            };
+                            final RequesterActivity.OnResult onResult =
+                                    new RequesterActivity.OnResult() {
+                                        @Override
+                                        public void onResult(@Nullable Intent result) {
+                                            r.setIfIsNotSet(result);
+                                        }
+                                    };
                             final RequesterActivity.Request request = opts.containsKey("notify") ?
                                     RequesterActivity.request(
                                             ui.ctx, Intent.createChooser(i, title), onResult,
@@ -548,36 +645,113 @@ public final class TermSh {
                             final Intent ri = r.get();
                             shellCmd.onTerminate = null;
                             // ===
-                            if (ri != null) {
-                                final Uri uri = ri.getData();
-                                if (uri != null) {
-                                    shellCmd.stdOut.write(Misc.toUTF8(uri.toString()));
-                                    break;
+                            final Uri uri;
+                            if (ri == null || (uri = ri.getData()) == null) {
+                                shellCmd.exit(1);
+                                return null;
+                            }
+                            if (output == null) {
+                                if (outputFile.isDirectory()) {
+                                    String filename = getName(uri);
+                                    if (filename == null) {
+                                        shellCmd.stdErr.write(Misc.toUTF8("Cannot deduce file name\n"));
+                                        filename = C.UNNAMED_FILE_NAME;
+                                        exitStatus = 2;
+                                    }
+                                    output = new FileOutputStream(new File(outputFile, filename));
+                                } else {
+                                    output = new FileOutputStream(outputFile);
                                 }
                             }
-                            shellCmd.exit(1);
-                            return null;
+                            if (opts.containsKey("uri")) {
+                                output.write(Misc.toUTF8(uri.toString()));
+                            } else {
+                                final InputStream is = openInputStream(uri);
+                                try {
+                                    Misc.copy(output, is);
+                                } finally {
+                                    is.close();
+                                }
+                            }
+                            break;
+                        }
+                        case "copy": {
+                            final BinaryGetOpts.Parser ap = new BinaryGetOpts.Parser(shellCmd.args);
+                            ap.skip();
+                            final Map<String, ?> opts = ap.parse(COPY_OPTS);
+                            if (shellCmd.args.length - ap.position != 0)
+                                throw new ParseException("Wrong number of arguments");
+                            final InputStream is;
+                            final OutputStream os;
+                            String name;
+                            Uri fromUri = null;
+                            File fromFile = null;
+                            if ((name = (String) opts.get("from-uri")) != null) {
+                                fromUri = Uri.parse(name);
+                                is = openInputStream(fromUri);
+                            } else if ((name = (String) opts.get("from-path")) != null) {
+                                fromFile = getFileWithCWD(shellCmd.currDir, name);
+                                is = new FileInputStream(fromFile);
+                            } else {
+                                is = shellCmd.stdIn;
+                            }
+                            if ((name = (String) opts.get("to-uri")) != null) {
+                                os = openOutputStream(Uri.parse(name));
+                            } else if ((name = (String) opts.get("to-path")) != null) {
+                                File of = getFileWithCWD(shellCmd.currDir, name);
+                                if (of.isDirectory()) {
+                                    String filename = null;
+                                    if (fromUri != null) {
+                                        filename = getName(fromUri);
+                                    } else if (fromFile != null) {
+                                        filename = fromFile.getName();
+                                    }
+                                    if (filename == null) {
+                                        shellCmd.stdErr.write(Misc.toUTF8("Cannot deduce file name\n"));
+                                        filename = C.UNNAMED_FILE_NAME;
+                                        exitStatus = 2;
+                                    }
+                                    of = new File(of, filename);
+                                }
+                                if (!opts.containsKey("force") && of.isFile())
+                                    throw new ParseException("File already exists");
+                                os = new FileOutputStream(of);
+                            } else {
+                                os = shellCmd.stdOut;
+                            }
+                            try {
+                                Misc.copy(os, is);
+                            } finally {
+                                try {
+                                    is.close();
+                                } finally {
+                                    os.close();
+                                }
+                            }
+                            break;
                         }
                         case "cat": {
                             if (shellCmd.args.length != 2)
                                 throw new ParseException("Wrong number of arguments");
                             final Uri uri = Uri.parse(Misc.fromUTF8(shellCmd.args[1]));
-                            final InputStream is =
-                                    ui.ctx.getContentResolver().openInputStream(uri);
-                            if (is == null) {
-                                // Asset
-                                throw new FileNotFoundException("Something not found");
-                            }
-                            final byte[] buf = new byte[8192];
+                            final InputStream is = openInputStream(uri);
                             try {
-                                while (true) {
-                                    final int r = is.read(buf);
-                                    if (r < 0) break;
-                                    shellCmd.stdOut.write(buf, 0, r);
-                                }
+                                Misc.copy(shellCmd.stdOut, is);
                             } finally {
                                 is.close();
                             }
+                            break;
+                        }
+                        case "name": {
+                            if (shellCmd.args.length != 2)
+                                throw new ParseException("Wrong number of arguments");
+                            final Uri uri = Uri.parse(Misc.fromUTF8(shellCmd.args[1]));
+                            final String name = getName(uri);
+                            if (name == null) {
+                                shellCmd.stdOut.write(Misc.toUTF8(C.UNNAMED_FILE_NAME));
+                                exitStatus = 2;
+                            } else
+                                shellCmd.stdOut.write(Misc.toUTF8(name));
                             break;
                         }
                         case "serial": {
@@ -631,8 +805,8 @@ public final class TermSh {
                         default:
                             throw new ParseException("Unknown command");
                     }
-                    shellCmd.exit(0);
-                } catch (final InterruptedException |
+                    shellCmd.exit(exitStatus);
+                } catch (final InterruptedException | SecurityException |
                         IOException | ParseException | BinaryGetOpts.ParseException e) {
                     try {
                         shellCmd.stdErr.write(Misc.toUTF8(e.getMessage() + "\n"));

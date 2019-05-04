@@ -21,6 +21,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Locale;
+import java.util.UUID;
 
 public final class StreamProvider extends ContentProvider {
     private static final int CODE_STREAM = 1;
@@ -47,12 +48,11 @@ public final class StreamProvider extends ContentProvider {
         }
     }
 
-    private int curr_id;
     private final SparseArray<Stream> streams = new SparseArray<>();
     private final Object stateLock = new Object();
 
-    private int obtainId() {
-        return curr_id++;
+    private static int obtainId() {
+        return (int) UUID.randomUUID().getLeastSignificantBits() & 0xFFFF;
     }
 
     @NonNull

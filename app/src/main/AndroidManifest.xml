@@ -98,7 +98,7 @@
             android:name=".StreamProvider"
             android:authorities="${applicationId}.streamprovider"
             android:exported="false"
-            android:grantUriPermissions="true"></provider>
+            android:grantUriPermissions="true" />
 
         <activity
             android:name=".RequesterActivity"

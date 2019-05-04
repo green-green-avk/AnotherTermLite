@@ -17,7 +17,7 @@
         This message.
 
 
-    * notify [-i|--id <id>] [<message>]
+    * notify [-i|--id <id>] [--] [<message>]
       notify -r|--remove -i|--id <id>
 
         Display notification,
@@ -28,32 +28,56 @@
         -r|--remove - remove notification by id
 
 
-    * [view|edit] [-n|--notify] [-m|--meta <meta>] [-t|--title <title>] [-u|--uri] <file|uri>
+    * [view|edit] [-n|--notify] [-m|--meta <meta>] [-t|--title <title>] [-u|--uri] [--] <file|URI>
 
         Open for view / edit with appropriate temporary access rights.
 
-        -u|--uri - use uri instead of file
+        -u|--uri - use URI instead of file
 
 
-    * send [-n|--notify] [-m|--meta <meta>] [-t|--title <title>] [-u|--uri] [<file|uri>]
+    * send [-n|--notify] [-m|--meta <meta>] [-t|--title <title>] [-u|--uri] [--] [<file|URI>]
 
         Send (android.intent.action.SEND). If no `file\' argument is specified, stdin is used.
 
-        -u|--uri - use uri instead of file
+        -u|--uri - use URI instead of file
 
 
-    * get [-n|--notify] [-m|--meta <meta>] [-t|--title <title>]
+    * pick [-n|--notify] [-m|--meta <meta>] [-t|--title <title>] [-u|--uri] [-f|--force] [--] [<path>]
 
-        Show document picker dialog and URI to stdout.
+        Show document picker dialog and URI to:
+         - file if <path> is a file;
+         - file with the name provided by content provider (or deduced from the URI)*
+            if <path> is a directory;
+         - stdout if nothing is specified.
+         stdout.
 
-        Example: $TERMSH cat `$TERMSH get` > some_file
+        Example: $TERMSH pick .
+
+        -u|--uri - output URI instead of content
+
+        -f|--force - permit destination overwriting
+
+
+    * copy [-f|--force] [-fp|--from-path|-fu|--from-uri <from>] [-tp|--to-path|-tu|--to-uri <to>]
+
+        Copy content. Only single files are supported now.
+        If <from> or <to> is not specified, stdin or stdout will be used respectively.
+        <to> can be a directory*.
+
+        -f|--force - permit destination overwriting
 
 
     * cat <URI>
 
         Copy specified Android URI content to the stdout.
 
-        Example: $TERMSH cat content://$APP_ID.linksprovider/html/some_url_to_be_wrapped_into_html
+        Examples: $TERMSH cat content://$APP_ID.linksprovider/html/some_url_to_be_wrapped_into_html
+                  uri="`$TERMSH pick -u`" ; $TERMSH cat "$uri" > "`$TERMSH name \"$uri\"`.new"
+
+
+    * name <URI>
+
+        Get the name provided by content provider (or deduced from the URI)*
 
 
     * serial [<baudrate>[/<databits>[/<stopbits>[/<parity>[/<flowcontrol>]]]]]
@@ -69,6 +93,10 @@
         parity - none, even, odd, mark, space
 
         flowcontrol - off, xon_xoff, rts_cts, dsr_dtr
+
+
+    Notes:
+        * `unnamed\' is used if name deduction fails and exit code 2 is returned.
 \
 \
 ]]></string>

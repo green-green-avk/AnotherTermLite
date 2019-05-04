@@ -6,7 +6,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class EscCsi {
-    private static final Pattern PAT = Pattern.compile("^\\e\\[([?>!]?)(.*?)([@A-Z\\\\^_`a-z{|}~])$");
+    private static final Pattern PAT = Pattern.compile(
+            "^\\e\\[([?>!]?)(.*?)([@A-Z\\\\^_`a-z{|}~])$", Pattern.DOTALL);
 
     public final char type;
     public final char prefix;
@@ -15,7 +16,7 @@ public final class EscCsi {
 
     public EscCsi(@NonNull final String v) throws IllegalArgumentException {
         final Matcher m = PAT.matcher(v);
-        if (!m.matches()) throw new IllegalArgumentException();
+        if (!m.matches()) throw new IllegalArgumentException("len=" + v.length());
         type = m.group(3).charAt(0);
         body = m.group(2);
         prefix = (m.group(1).isEmpty()) ? 0 : m.group(1).charAt(0);

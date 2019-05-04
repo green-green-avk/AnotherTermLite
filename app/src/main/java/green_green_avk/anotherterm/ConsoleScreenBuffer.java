@@ -468,7 +468,7 @@ public final class ConsoleScreenBuffer {
             v = -v;
         }
         while (v > 0) {
-            Row row;
+            final Row row;
             if (mRows.size() > top && top >= 0) {
                 row = mRows.remove(top);
                 Arrays.fill(row.text, ' ');
@@ -476,7 +476,7 @@ public final class ConsoleScreenBuffer {
                 row = new Row();
             }
             Arrays.fill(row.attrs, (mRows.size() < mHeight) ? defaultAttrs : currentAttrs);
-            mRows.add((bottom < 0) ? 0 : bottom, row);
+            mRows.add(bottom < 0 ? 0 : (bottom > mRows.size() ? mRows.size() : bottom), row);
             if (top < 0) {
                 ++top;
                 ++bottom;

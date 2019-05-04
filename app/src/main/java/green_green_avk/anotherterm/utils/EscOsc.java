@@ -6,14 +6,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class EscOsc {
-    private static final Pattern PAT = Pattern.compile("^\\e](.*?)(?:\\a|\\e\\\\)$");
+    private static final Pattern PAT = Pattern.compile(
+            "^\\e](.*?)(?:\\a|\\e\\\\)$", Pattern.DOTALL);
 
     public final String body;
     public final String[] args;
 
     public EscOsc(@NonNull final String v) throws IllegalArgumentException {
         final Matcher m = PAT.matcher(v);
-        if (!m.matches()) throw new IllegalArgumentException();
+        if (!m.matches()) throw new IllegalArgumentException("len=" + v.length());
         body = m.group(1);
         args = body.split(";");
     }

@@ -74,10 +74,10 @@ public final class CompatHtmlTagHandler implements Html.TagHandler {
                     break;
                 }
                 case "clipboard": {
-                    output.append('\u2398');
                     final String content = output.subSequence(cbtStart, output.length()).toString();
                     output.setSpan(new ClipboardSpan(content),
                             cbtStart, output.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    output.append('\u2398');
                     break;
                 }
             }

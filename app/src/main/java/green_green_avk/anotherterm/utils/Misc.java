@@ -7,6 +7,7 @@ import android.util.SparseIntArray;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -27,6 +28,16 @@ public final class Misc {
     @NonNull
     public static byte[] toUTF8(@NonNull final String v) {
         return v.getBytes(UTF8);
+    }
+
+    public static void copy(@NonNull final OutputStream os,
+                            @NonNull final InputStream is) throws IOException {
+        final byte[] buf = new byte[8192];
+        while (true) {
+            final int r = is.read(buf);
+            if (r < 0) break;
+            os.write(buf, 0, r);
+        }
     }
 
     // IOUtils.toByteArray() from the Apache Commons IO

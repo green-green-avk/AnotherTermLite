@@ -25,7 +25,7 @@ public final class CustomHtml {
             for (final ClipboardSpan cs : r.getSpans(0, source.length(), ClipboardSpan.class)) {
                 ((Spannable) r).setSpan(
                         new ImageSpan(ctx, R.drawable.ic_mark_copy, DynamicDrawableSpan.ALIGN_BASELINE),
-                        r.getSpanEnd(cs) - 1, r.getSpanEnd(cs), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        r.getSpanEnd(cs), r.getSpanEnd(cs) + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
         return r;
