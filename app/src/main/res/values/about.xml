@@ -19,7 +19,10 @@
 <a href="http://kevinboone.net/android_nonroot.html">
 <i>Using standard Linux utilities in a stock, non-rooted Android device</i>
 by Kevin Boone</a>. ;)</li>
-<li>The introduction of a shell utility to interact with the Android environment has been started.</li>
+<li>The introduction of a shell utility to interact with the Android environment has been started.
+Content exchange between other applications and own files / pipes has been implemented
+like in Termux. USB serial port dongle access from the command line has also been implemented
+(unlike Termux) ;).</li>
 <li>Arbitrary content providers support will be added later.</li>
 <li>Different charsets and customizable key mapping support.</li>
 <li>Builtin screen keyboard and mouse.</li>
