@@ -52,43 +52,38 @@ public class TelnetClient {
 
     protected static final ByteBuffer eraseLine = ByteBuffer.wrap(new byte[]{0x1B, '[', '1', 'K'});
 
+    protected static int indexOf(@NonNull byte[] buf, int start, int end, byte v) {
+        if (end > buf.length || end < 0) end = buf.length;
+        if (start > end || start < 0) throw new IllegalArgumentException();
+        for (int i = start; i < end; ++i) {
+            if (v == buf[i]) return i;
+        }
+        return -1;
+    }
+
+    protected static int indexOf(@NonNull final ByteBuffer buf, int start, int end, final byte v) {
+        if (buf.hasArray()) {
+            if (start < 0) start = buf.position();
+            final int r = indexOf(buf.array(),
+                    start + buf.arrayOffset(),
+                    end < 0 || end > buf.limit() ? buf.limit() : end,
+                    v);
+            if (r < 0) return r;
+            else return r - buf.arrayOffset();
+        } else {
+            throw new UnsupportedOperationException();
+        }
+    }
+
     public static int uv(final byte v) {
         return (int) v & 0xFF;
     }
-
-    public static class FastImpl {
-        public int indexOf(@NonNull byte[] buf, int start, int end, byte v) {
-            if (end > buf.length || end < 0) end = buf.length;
-            if (start > end || start < 0) throw new IllegalArgumentException();
-            for (int i = start; i < end; ++i) {
-                if (v == buf[i]) return i;
-            }
-            return -1;
-        }
-
-        public int indexOf(@NonNull final ByteBuffer buf, int start, int end, final byte v) {
-            if (buf.hasArray()) {
-                if (start < 0) start = buf.position();
-                final int r = indexOf(buf.array(),
-                        start + buf.arrayOffset(),
-                        end < 0 || end > buf.limit() ? buf.limit() : end,
-                        v);
-                if (r < 0) return r;
-                else return r - buf.arrayOffset();
-            } else {
-                throw new UnsupportedOperationException();
-            }
-        }
-    }
-
-    // To be redefined with overridden class for fast implementation if possible
-    public static FastImpl fastImpl = new FastImpl();
 
     public static byte[] escape(@Nullable final byte[] value) {
         if (value == null) return null;
         int len = value.length;
         int p = 0;
-        while ((p = fastImpl.indexOf(value, p, -1, Cmd.IAC)) >= 0) {
+        while ((p = indexOf(value, p, -1, Cmd.IAC)) >= 0) {
             ++p;
             ++len;
         }
@@ -97,7 +92,7 @@ public class TelnetClient {
         p = 0;
         int d = 0;
         int e;
-        while ((e = fastImpl.indexOf(value, p, -1, Cmd.IAC)) >= 0) {
+        while ((e = indexOf(value, p, -1, Cmd.IAC)) >= 0) {
             ++e;
             System.arraycopy(value, p, r, p + d, e - p);
             r[e + d] = Cmd.IAC;
@@ -404,7 +399,7 @@ public class TelnetClient {
         int b = start;
         int e;
         synchronized (sendLock) {
-            while ((e = fastImpl.indexOf(buf, b, end, Cmd.IAC)) >= 0) {
+            while ((e = indexOf(buf, b, end, Cmd.IAC)) >= 0) {
                 ++e;
                 sendRaw(buf, b, e);
                 sendRaw(IAC, 0, IAC.length);
@@ -467,7 +462,7 @@ public class TelnetClient {
         inputBuffer.limit(inputBuffer.position() + len);
         while (true) {
             if (inputBuffer.remaining() == 0) return markup;
-            final int pos = fastImpl.indexOf(inputBuffer, -1, -1, Cmd.IAC);
+            final int pos = indexOf(inputBuffer, -1, -1, Cmd.IAC);
             if (pos < 0) {
                 markup.add(markPool.obtain(inputBuffer, Mark.Type.DATA));
                 return markup;
@@ -538,7 +533,7 @@ public class TelnetClient {
                     case Cmd.SB: {
                         int e = buf.position();
                         do {
-                            e = fastImpl.indexOf(buf, e, -1, Cmd.IAC);
+                            e = indexOf(buf, e, -1, Cmd.IAC);
                             if (e < 0) return -1;
                         } while (buf.get(e + 1) != Cmd.SE);
                         final int i = uv(buf.get());

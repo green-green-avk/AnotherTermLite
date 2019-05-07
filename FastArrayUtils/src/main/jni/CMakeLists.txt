@@ -1,8 +1,0 @@
-cmake_minimum_required(VERSION 3.4.1)
-add_library(fastarrayutils SHARED main.cpp)
-add_definitions(-DPKG_NAME="green_green_avk/fastarrayutils")
-add_definitions(-fno-rtti)
-add_definitions(-fno-exceptions)
-add_definitions(-fvisibility=hidden)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fstack-protector")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Os -g0")

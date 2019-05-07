@@ -10,7 +10,7 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
+import java.nio.ByteBuffer;
 
 public final class EventBasedBackendModuleWrapper {
     private static final int MSG_KILL_SERV = 1;
@@ -28,6 +28,9 @@ public final class EventBasedBackendModuleWrapper {
     private volatile boolean isStopping = false;
     private volatile boolean isConnected = false;
     private final Listener listener;
+
+    private final Object readLock = new Object();
+
     @SuppressLint("HandlerLeak")
     private Handler handler = new Handler() {
         @Override
@@ -46,7 +49,10 @@ public final class EventBasedBackendModuleWrapper {
                     listener.onDisconnected();
                     break;
                 case MSG_READ:
-                    listener.onRead((byte[]) msg.obj);
+                    synchronized (readLock) {
+                        listener.onRead((ByteBuffer) msg.obj);
+                        readLock.notify();
+                    }
                     break;
                 case MSG_ERROR:
                     listener.onError((Throwable) msg.obj);
@@ -71,9 +77,9 @@ public final class EventBasedBackendModuleWrapper {
 
         void onDisconnected();
 
-        void onRead(byte[] v);
+        void onRead(@NonNull ByteBuffer v);
 
-        void onError(Throwable e);
+        void onError(@NonNull Throwable e);
     }
 
     public EventBasedBackendModuleWrapper(@NonNull final BackendModule module,
@@ -98,7 +104,7 @@ public final class EventBasedBackendModuleWrapper {
     private void init() {
         wrapped.setOnMessageListener(new BackendModule.OnMessageListener() {
             @Override
-            public void onMessage(final Object msg) {
+            public void onMessage(@NonNull final Object msg) {
                 if (msg instanceof Throwable)
                     handler.obtainMessage(MSG_ERROR, msg).sendToTarget();
             }
@@ -113,17 +119,35 @@ public final class EventBasedBackendModuleWrapper {
             // TODO: get rid of copying: use nio buffers and wait
             @Override
             public void write(final int b) {
-                handler.obtainMessage(MSG_READ, new byte[]{(byte) b}).sendToTarget();
+                synchronized (readLock) {
+                    handler.obtainMessage(MSG_READ, ByteBuffer.wrap(new byte[]{(byte) b})).sendToTarget();
+                    try {
+                        readLock.wait();
+                    } catch (final InterruptedException ignored) {
+                    }
+                }
             }
 
             @Override
             public void write(@NonNull final byte[] b, final int off, final int len) {
-                handler.obtainMessage(MSG_READ, Arrays.copyOfRange(b, off, off + len)).sendToTarget();
+                synchronized (readLock) {
+                    handler.obtainMessage(MSG_READ, ByteBuffer.wrap(b, off, len)).sendToTarget();
+                    try {
+                        readLock.wait();
+                    } catch (final InterruptedException ignored) {
+                    }
+                }
             }
 
             @Override
             public void write(@NonNull final byte[] b) {
-                handler.obtainMessage(MSG_READ, Arrays.copyOf(b, b.length)).sendToTarget();
+                synchronized (readLock) {
+                    handler.obtainMessage(MSG_READ, ByteBuffer.wrap(b)).sendToTarget();
+                    try {
+                        readLock.wait();
+                    } catch (final InterruptedException ignored) {
+                    }
+                }
             }
         });
         serviceThread.setDaemon(true);

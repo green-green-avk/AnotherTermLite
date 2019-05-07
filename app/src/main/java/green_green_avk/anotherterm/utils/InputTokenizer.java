@@ -2,6 +2,8 @@ package green_green_avk.anotherterm.utils;
 
 import android.support.annotation.NonNull;
 
+import java.io.IOException;
+import java.nio.CharBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
@@ -9,7 +11,6 @@ import java.util.regex.Pattern;
 
 public final class InputTokenizer implements Iterator<InputTokenizer.Token>, Iterable<InputTokenizer.Token> {
     private static final int SEQ_MAXLEN = 256;
-    private static final Pattern CTL_PAT = Pattern.compile("[\\x00-\\x1F\\x7F]");
     private static final Pattern CSI_END_PAT = Pattern.compile("[@A-Z\\\\^_`a-z{|}~]");
     private static final Pattern OSC_END_PAT = Pattern.compile("\\a|\\e\\\\");
 
@@ -18,28 +19,26 @@ public final class InputTokenizer implements Iterator<InputTokenizer.Token>, Ite
             TEXT, CTL, ESC, CSI, OSC
         }
 
-        public final Type type;
-        public final String value;
-
-        public Token(@NonNull final Type t, @NonNull final String v) {
-            type = t;
-            value = v;
-        }
+        public Type type;
+        public CharBuffer value;
     }
 
-    private String mStr = "";
+    private final Token ownToken = new Token();
+
+    private final CharBuffer mBuf = (CharBuffer) CharBuffer.allocate(8192).flip();
+    private final char[] mBufArr = mBuf.array();
     private int mPos = 0;
-    private String mToken = null;
+    private CharBuffer mToken = null;
     private Token.Type mType = Token.Type.TEXT;
     private Boolean mGotNext = false;
 
-    private void getSequence(int pos, final Pattern pat) {
-        final Matcher m = pat.matcher(mStr);
-        m.region(pos, mStr.length());
+    private void getSequence(int pos, @NonNull final Pattern pat) {
+        final Matcher m = pat.matcher(mBuf);
+        m.region(pos, mBuf.limit());
         if (!m.find()) {
-            if ((mStr.length() - pos) > SEQ_MAXLEN) {
+            if ((mBuf.limit() - pos) > SEQ_MAXLEN) {
                 mType = Token.Type.TEXT;
-                mToken = mStr.substring(mPos, pos);
+                mToken = mBuf.subSequence(mPos, pos);
                 mPos = pos;
                 return;
             }
@@ -47,82 +46,86 @@ public final class InputTokenizer implements Iterator<InputTokenizer.Token>, Ite
             return;
         }
         pos = m.end();
-        mToken = mStr.substring(mPos, pos);
+        mToken = mBuf.subSequence(mPos, pos);
         mPos = pos;
     }
 
     private void getNext() {
-        if (mStr.length() == mPos) {
+        if (mBuf.limit() <= mPos) {
             mToken = null;
             return;
         }
-        final Matcher m;
-        int pos;
-        m = CTL_PAT.matcher(mStr);
-        m.region(mPos, mStr.length());
-        if (!m.find()) {
-            mType = Token.Type.TEXT;
-            mToken = mStr.substring(mPos);
-            mPos = mStr.length();
-            return;
+        int pos = mPos;
+        for (; mBufArr[pos] > 0x1F && mBufArr[pos] != 0x7F; ++pos) {
+            if (pos >= mBuf.limit()) {
+                mType = Token.Type.TEXT;
+                mToken = mBuf.subSequence(mPos, mBuf.limit());
+                mPos = mBuf.limit();
+                return;
+            }
         }
-        pos = m.start();
         if (pos > mPos) {
             mType = Token.Type.TEXT;
-            mToken = mStr.substring(mPos, pos);
+            mToken = mBuf.subSequence(mPos, pos);
             mPos = pos;
             return;
         }
-        if (mStr.charAt(pos) != '\u001B') {
+        if (mBufArr[pos] != '\u001B') {
             mType = Token.Type.CTL;
-            mToken = mStr.substring(pos, pos + 1);
+            mToken = mBuf.subSequence(pos, pos + 1);
             mPos = pos + 1;
             return;
         }
         mType = Token.Type.ESC;
         ++pos;
-        try {
-            switch (mStr.charAt(pos)) {
-                case '[':
-                    mType = Token.Type.CSI;
-                    getSequence(pos + 1, CSI_END_PAT);
-                    return;
-                case ']':
-                    mType = Token.Type.OSC;
-                    getSequence(pos + 1, OSC_END_PAT);
-                    return;
-                case ' ':
-                case '#':
-                case '%':
-                case '(':
-                case ')':
-                case '*':
-                case '+':
-                case '-':
-                case '.':
-                case '/':
-                    pos += 2;
-                    mToken = mStr.substring(mPos, pos);
-                    mPos = pos;
-                    return;
-                default:
-                    ++pos;
-                    mToken = mStr.substring(mPos, pos);
-                    mPos = pos;
-                    return;
-            }
-        } catch (final IndexOutOfBoundsException e) {
+        if (mBuf.limit() <= pos) {
             mToken = null;
             return;
         }
+        switch (mBufArr[pos]) {
+            case '[':
+                mType = Token.Type.CSI;
+                getSequence(pos + 1, CSI_END_PAT);
+                return;
+            case ']':
+                mType = Token.Type.OSC;
+                getSequence(pos + 1, OSC_END_PAT);
+                return;
+            case ' ':
+            case '#':
+            case '%':
+            case '(':
+            case ')':
+            case '*':
+            case '+':
+            case '-':
+            case '.':
+            case '/':
+                pos += 2;
+                if (mBuf.limit() < pos) {
+                    mToken = null;
+                    return;
+                }
+                mToken = mBuf.subSequence(mPos, pos);
+                mPos = pos;
+                return;
+            default:
+                ++pos;
+                mToken = mBuf.subSequence(mPos, pos);
+                mPos = pos;
+                return;
+        }
     }
 
+    @NonNull
     @Override
     public Token next() {
         if (!mGotNext) getNext();
         if (mToken == null) throw new NoSuchElementException();
         mGotNext = false;
-        return new Token(mType, mToken);
+        ownToken.type = mType;
+        ownToken.value = mToken;
+        return ownToken;
     }
 
     @Override
@@ -138,20 +141,11 @@ public final class InputTokenizer implements Iterator<InputTokenizer.Token>, Ite
         return this;
     }
 
-    public void tokenize(@NonNull final char[] buf, final int start, final int len) {
-        tokenize(new String(buf, start, len));
-    }
-
-    public void tokenize(@NonNull final CharSequence v) {
-        tokenize(v.toString());
-    }
-
-    public void tokenize(@NonNull final String v) {
-        if (mStr.length() == mPos) {
-            mStr = v;
-        } else {
-            mStr = mStr.substring(mPos) + v;
-        }
+    public void tokenize(@NonNull final Readable v) throws IOException {
+        mBuf.position(mPos);
+        mBuf.compact();
+        v.read(mBuf);
+        mBuf.flip();
         mPos = 0;
         mGotNext = false;
     }

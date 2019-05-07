@@ -2,6 +2,7 @@ package green_green_avk.anotherterm.utils;
 
 import android.support.annotation.NonNull;
 
+import java.nio.CharBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,7 +15,7 @@ public final class EscCsi {
     public final String body;
     public final String[] args;
 
-    public EscCsi(@NonNull final String v) throws IllegalArgumentException {
+    public EscCsi(@NonNull final CharBuffer v) throws IllegalArgumentException {
         final Matcher m = PAT.matcher(v);
         if (!m.matches()) throw new IllegalArgumentException("len=" + v.length());
         type = m.group(3).charAt(0);

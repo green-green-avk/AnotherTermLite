@@ -9,8 +9,6 @@ import java.nio.CharBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import green_green_avk.fastarrayutils.FastArrayUtils;
-
 public final class ConsoleScreenBuffer {
     public static final int MAX_BUF_HEIGHT = 100000;
     public static final int MAX_ROW_LEN = 1024;
@@ -164,13 +162,22 @@ public final class ConsoleScreenBuffer {
         return CharBuffer.wrap(row.text, x, len);
     }
 
+    private int getSameAttrLen(final int[] attrs, int start, final int end) {
+        final int v = attrs[start];
+        ++start;
+        for (; start < end; ++start) {
+            if (attrs[start] != v) break;
+        }
+        return start;
+    }
+
     public CharSequence getChars(final int x, final int y) {
         final int by = toBufY(y);
         if (x < 0 || x >= mWidth || by < 0 || by >= mRows.size()) {
             return null;
         }
         final Row row = mRows.get(by);
-        return CharBuffer.wrap(row.text, x, FastArrayUtils.getEqualElementsLength(row.attrs, x, mWidth));
+        return CharBuffer.wrap(row.text, x, getSameAttrLen(row.attrs, x, mWidth));
     }
 
     public char getChar(final int x, final int y) {
@@ -357,32 +364,33 @@ public final class ConsoleScreenBuffer {
         return setChars(mPos.x, mPos.y, s, mPos);
     }
 
-    public int setChars(@NonNull final char[] s) {
+    public int setChars(@NonNull final CharBuffer s) {
         return setChars(mPos.x, mPos.y, s, mPos);
     }
 
     public int setChars(final int x, final int y, @NonNull final String s, final Point endPos) {
-        return setChars(x, y, s.toCharArray(), endPos);
+        return setChars(x, y, CharBuffer.wrap(s), endPos);
     }
 
-    public int setChars(int x, int y, @NonNull final char[] s, final Point endPos) {
+    public int setChars(int x, int y, @NonNull final CharBuffer s, final Point endPos) {
         y += x / mWidth;
         x %= mWidth;
         int by = arrangeSetPos(x, y);
         if (by < 0) return 0;
+        final CharBuffer buf = s.duplicate();
         Row row = mRows.get(by);
-        int end = Math.min(s.length + x, mWidth);
+        int end = Math.min(buf.remaining() + x, mWidth);
         int len = end - x;
-        System.arraycopy(s, 0, row.text, x, len);
+        buf.get(row.text, x, len);
         Arrays.fill(row.attrs, x, end, currentAttrs);
         if (wrap) {
-            while (s.length > len) {
+            while (buf.remaining() > 0) {
                 if (by == 0) scroll(1);
                 else --by;
                 ++y;
                 row = mRows.get(by);
-                end = Math.min(s.length - len, mWidth);
-                System.arraycopy(s, len, row.text, 0, end);
+                end = Math.min(buf.remaining(), mWidth);
+                buf.get(row.text, 0, end);
                 Arrays.fill(row.attrs, 0, end, currentAttrs);
                 len += end;
             }

@@ -39,7 +39,7 @@ public final class ConsoleOutput {
         return charset;
     }
 
-    public void setCharset(Charset ch) {
+    public void setCharset(final Charset ch) {
         charset = ch;
     }
 
@@ -47,18 +47,18 @@ public final class ConsoleOutput {
         return keyMap;
     }
 
-    public void setKeyMap(TermKeyMapRules km) {
+    public void setKeyMap(final TermKeyMapRules km) {
         keyMap = km;
     }
 
     @Nullable
-    public String getKeySeq(int code, int modifiers) {
+    public String getKeySeq(final int code, final int modifiers) {
         final int appMode = (appCursorKeys ? TermKeyMap.APP_MODE_CURSOR : 0)
                 | (appNumKeys ? TermKeyMap.APP_MODE_NUMPAD : 0);
         return keyMap.get(code, modifiers, appMode);
     }
 
-    public void feed(int code, boolean shift, boolean alt, boolean ctrl) {
+    public void feed(final int code, final boolean shift, final boolean alt, final boolean ctrl) {
         if (code == ExtKeyboard.KEYCODE_NONE) return;
         if (code < 0) {
             char c = (char) -code;
@@ -70,7 +70,7 @@ public final class ConsoleOutput {
                 }
             }
             if (alt) {
-                feed("\u001B" + Character.toString(c));
+                feed("\u001B" + c);
                 return;
             }
             feed(Character.toString(c));
@@ -84,7 +84,7 @@ public final class ConsoleOutput {
         if (r != null) feed(r);
     }
 
-    public void feed(KeyEvent event) {
+    public void feed(final KeyEvent event) {
         final int code = event.getKeyCode();
         final int modifiers =
                 ((event.isShiftPressed() ? 1 : 0) |
@@ -101,17 +101,17 @@ public final class ConsoleOutput {
         }
     }
 
-    public void feed(String v) {
+    public void feed(final String v) {
         if (backendModule != null) {
             backendModule.write(v.getBytes(charset));
         }
     }
 
-    public void paste(String v) {
+    public void paste(final String v) {
         feed(bracketedPasteMode ? "\u001B[200~" + v + "\u001B[201~" : v);
     }
 
-    public void vScroll(int lines) {
+    public void vScroll(final int lines) {
         if (lines == 0) return;
         if (lines < 0) feed(TermKeyMap.KEYCODE_SCROLL_SCREEN_UP, false, false, false);
         else feed(TermKeyMap.KEYCODE_SCROLL_SCREEN_DOWN, false, false, false);
@@ -127,12 +127,13 @@ public final class ConsoleOutput {
     public static final int MOUSE_RIGHT = MotionEvent.BUTTON_SECONDARY;
     public static final int MOUSE_MIDDLE = MotionEvent.BUTTON_TERTIARY;
 
-    public void feed(MouseEventType type, int buttons, int x, int y) {
+    public void feed(final MouseEventType type, final int buttons, final int x, final int y) {
         if (!isMouseSupported()) return;
         feed(type, buttons, x, y, false, false, false); // TODO: fix
     }
 
-    public void feed(MouseEventType type, int buttons, int x, int y, boolean shift, boolean alt, boolean ctrl) {
+    public void feed(final MouseEventType type, final int buttons, final int x, final int y,
+                     final boolean shift, final boolean alt, final boolean ctrl) {
         if (!isMouseSupported()) return;
         final boolean wheel = type == MouseEventType.VSCROLL;
         if (wheel && buttons == 0) return;

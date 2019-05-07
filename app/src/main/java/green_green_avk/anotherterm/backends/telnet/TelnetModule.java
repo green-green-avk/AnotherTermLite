@@ -14,7 +14,6 @@ import java.util.Map;
 
 import green_green_avk.anotherterm.backends.BackendException;
 import green_green_avk.anotherterm.backends.BackendModule;
-import green_green_avk.fastarrayutils.FastArrayUtils;
 import green_green_avk.telnetclient.EchoTelnetOptionHandler;
 import green_green_avk.telnetclient.SuppressGATelnetOptionHandler;
 import green_green_avk.telnetclient.TelnetClient;
@@ -153,15 +152,6 @@ public final class TelnetModule extends BackendModule {
                 l.onMessage(e);
             }
         });
-    }
-
-    static {
-        TelnetClient.fastImpl = new TelnetClient.FastImpl() {
-            @Override
-            public int indexOf(@NonNull final byte[] buf, final int start, final int end, final byte v) {
-                return FastArrayUtils.indexOf(buf, start, end, v);
-            }
-        };
     }
 
     private final TelnetClient tc = new TelnetClient();

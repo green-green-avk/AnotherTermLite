@@ -68,29 +68,32 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     protected float mFontHeight;
     protected ConsoleScreenSelection selection = null;
     protected boolean selectionMode = false;
-    protected Point selectionMarkerFirst = new Point();
-    protected Point selectionMarkerLast = new Point();
+    protected final Point selectionMarkerFirst = new Point();
+    protected final Point selectionMarkerLast = new Point();
     protected Point selectionMarker = selectionMarkerFirst;
     protected boolean mouseMode = false;
 
     private boolean mBlinkState = true;
     private WeakHandler mHandler = null;
 
-    public ConsoleScreenView(Context context, AttributeSet attrs) {
+    public ConsoleScreenView(final Context context, final AttributeSet attrs) {
         this(context, attrs, R.attr.consoleScreenViewStyle);
     }
 
-    public ConsoleScreenView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public ConsoleScreenView(final Context context, final AttributeSet attrs,
+                             final int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init(context, attrs, defStyleAttr, R.style.AppConsoleScreenViewStyle);
     }
 
-    public ConsoleScreenView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public ConsoleScreenView(final Context context, final AttributeSet attrs,
+                             final int defStyleAttr, final int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
         init(context, attrs, defStyleAttr, defStyleRes);
     }
 
-    protected void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    protected void init(final Context context, final AttributeSet attrs,
+                        final int defStyleAttr, final int defStyleRes) {
         final TypedArray a = context.obtainStyledAttributes(
                 attrs, R.styleable.ConsoleScreenView, defStyleAttr, defStyleRes);
         try {
@@ -179,7 +182,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         return mFontSize;
     }
 
-    public void setFontSize(float size) {
+    public void setFontSize(final float size) {
         mFontSize = size;
         applyFont();
         if (consoleInput != null) consoleInput.resize(getCols(), getRows());
@@ -190,7 +193,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         return selectionMode;
     }
 
-    public void setSelectionMode(boolean mode) {
+    public void setSelectionMode(final boolean mode) {
         selectionMode = mode;
         scrollDisabled = mode || mouseMode;
         if (mode) {
@@ -209,7 +212,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         return selection != null && selection.isRectangular;
     }
 
-    public void setSelectionIsRect(boolean v) {
+    public void setSelectionIsRect(final boolean v) {
         if (selection != null) {
             selection.isRectangular = v;
             ViewCompat.postInvalidateOnAnimation(this);
@@ -220,7 +223,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         return selectionMarker == selectionMarkerLast;
     }
 
-    public void setSelectionMarker(boolean last) {
+    public void setSelectionMarker(final boolean last) {
         selectionMarker = last ? selectionMarkerLast : selectionMarkerFirst;
     }
 
@@ -228,74 +231,80 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         return mouseMode;
     }
 
-    public void setMouseMode(boolean mode) {
+    public void setMouseMode(final boolean mode) {
         mouseMode = mode;
         scrollDisabled = mode || selectionMode;
     }
 
-    protected void getCenter(int x, int y, final Point r) {
+    protected void getCenter(final int x, final int y, @NonNull final Point r) {
         final Rect p = getBufferDrawRect(x, y);
         r.x = (p.left + p.right) / 2;
         r.y = (p.top + p.bottom) / 2;
     }
 
-    protected Rect getBufferDrawRect(int x, int y) {
+    protected Rect getBufferDrawRect(final int x, final int y) {
         return getBufferDrawRect(x, y, x + 1, y + 1);
     }
 
-    protected void getBufferDrawRect(int x, int y, Rect rect) {
+    protected void getBufferDrawRect(final int x, final int y, @NonNull final Rect rect) {
         getBufferDrawRect(x, y, x + 1, y + 1, rect);
     }
 
-    protected Rect getBufferDrawRect(Rect rect) {
+    protected Rect getBufferDrawRect(@NonNull final Rect rect) {
         return getBufferDrawRect(rect.left, rect.top, rect.right, rect.bottom);
     }
 
-    protected Rect getBufferDrawRect(int left, int top, int right, int bottom) {
+    protected Rect getBufferDrawRect(final int left, final int top,
+                                     final int right, final int bottom) {
         Rect r = new Rect();
         getBufferDrawRect(left, top, right, bottom, r);
         return r;
     }
 
-    protected void getBufferDrawRect(int left, int top, int right, int bottom, Rect rect) {
+    protected void getBufferDrawRect(final int left, final int top,
+                                     final int right, final int bottom,
+                                     @NonNull final Rect rect) {
         rect.left = (int) (left * mFontWidth);
         rect.top = (int) ((top - scrollPosition.y) * mFontHeight);
         rect.right = (int) (right * mFontWidth);
         rect.bottom = (int) ((bottom - scrollPosition.y) * mFontHeight);
     }
 
-    protected Rect getBufferTextRect(int left, int top, int right, int bottom) {
+    protected Rect getBufferTextRect(final int left, final int top,
+                                     final int right, final int bottom) {
         Rect r = new Rect();
         getBufferTextRect(left, top, right, bottom, r);
         return r;
     }
 
-    protected void getBufferTextRect(int left, int top, int right, int bottom, Rect rect) {
+    protected void getBufferTextRect(final int left, final int top,
+                                     final int right, final int bottom,
+                                     @NonNull final Rect rect) {
         rect.left = (int) Math.floor(left / mFontWidth);
         rect.top = (int) Math.floor(top / mFontHeight + scrollPosition.y);
         rect.right = (int) Math.ceil(right / mFontWidth);
         rect.bottom = (int) Math.ceil(bottom / mFontHeight + scrollPosition.y);
     }
 
-    protected Rect getBufferDrawRectInc(Point first, Point last) {
+    protected Rect getBufferDrawRectInc(@NonNull final Point first, @NonNull final Point last) {
         return getBufferDrawRectInc(first.x, first.y, last.x, last.y);
     }
 
-    protected Rect getBufferDrawRectInc(int x1, int y1, int x2, int y2) {
+    protected Rect getBufferDrawRectInc(final int x1, final int y1, final int x2, final int y2) {
         Rect r = new Rect();
         getBufferDrawRect(Math.min(x1, x2), Math.min(y1, y2), Math.max(x1, x2) + 1, Math.max(y1, y2) + 1, r);
         return r;
     }
 
-    protected int getBufferTextPosX(int x) {
+    protected int getBufferTextPosX(final int x) {
         return (int) Math.floor(x / mFontWidth);
     }
 
-    protected int getBufferTextPosY(int y) {
+    protected int getBufferTextPosY(final int y) {
         return (int) Math.floor(y / mFontHeight + scrollPosition.y);
     }
 
-    protected void getBufferTextPos(int x, int y, Point r) {
+    protected void getBufferTextPos(final int x, final int y, @NonNull final Point r) {
         r.x = getBufferTextPosX(x);
         r.y = getBufferTextPosY(y);
     }
@@ -309,8 +318,8 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     }
 
     public void applyCharAttrs() {
-        int fgColor;
-        int bgColor;
+        final int fgColor;
+        final int bgColor;
         if (charAttrs.inverse) {
             fgColor = charAttrs.bgColor;
             bgColor = charAttrs.fgColor;
@@ -325,7 +334,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         bgPaint.setColor(bgColor);
     }
 
-    public void setConsoleInput(@NonNull ConsoleInput consoleInput) {
+    public void setConsoleInput(@NonNull final ConsoleInput consoleInput) {
         this.consoleInput = consoleInput;
         this.consoleInput.addOnInvalidateSink(this);
         if (getCols() > 0 && getRows() > 0)
@@ -386,7 +395,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     }
 
     @Override
-    public void onInvalidateSink(Rect rect) {
+    public void onInvalidateSink(final Rect rect) {
         if (rect == null) ViewCompat.postInvalidateOnAnimation(this);
         else invalidate(rect);
         if (consoleInput.currScrBuf.windowTitle != null)
@@ -394,7 +403,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     }
 
     @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+    protected void onSizeChanged(final int w, final int h, final int oldw, final int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         if (consoleInput != null) consoleInput.resize(getCols(), getRows());
     }
@@ -413,14 +422,14 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
+    public boolean onTouchEvent(final MotionEvent event) {
         if (mouseMode) { // No gestures here
             if (consoleInput != null && consoleInput.consoleOutput != null) {
                 final int x = getBufferTextPosX(MathUtils.clamp((int) event.getX(), 0, getWidth() - 1));
                 final int y = getBufferTextPosY(MathUtils.clamp((int) event.getY(), 0, getHeight() - 1));
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN: {
-                        int buttons;
+                        final int buttons;
                         if (event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER) {
                             buttons = MotionEvent.BUTTON_PRIMARY;
                         } else {
@@ -446,7 +455,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
                         break;
                     }
                     case MotionEvent.ACTION_UP: {
-                        int buttons;
+                        final int buttons;
                         if (event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER) {
                             buttons = MotionEvent.BUTTON_PRIMARY;
                         } else {
@@ -466,7 +475,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     }
 
     @Override
-    public boolean onGenericMotionEvent(MotionEvent event) {
+    public boolean onGenericMotionEvent(final MotionEvent event) {
         if (mouseMode) {
             if (consoleInput != null && consoleInput.consoleOutput != null) {
                 final int x = getBufferTextPosX(MathUtils.clamp((int) event.getX(), 0, getWidth() - 1));
@@ -496,7 +505,8 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     private float prevVScrollPos = 0;
 
     @Override
-    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+    public boolean onScroll(final MotionEvent e1, final MotionEvent e2,
+                            final float distanceX, final float distanceY) {
         if (selectionMode) {
             selectionMarker.x = MathUtils.clamp((int) (selectionMarker.x - distanceX), 0, getWidth() - 1);
             selectionMarker.y = MathUtils.clamp((int) (selectionMarker.y - distanceY), 0, getHeight() - 1);
@@ -515,7 +525,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     }
 
     @Override
-    public boolean onSingleTapUp(MotionEvent e) {
+    public boolean onSingleTapUp(final MotionEvent e) {
         if (selectionMode) {
             setSelectionMarker(!getSelectionMarker());
             ViewCompat.postInvalidateOnAnimation(this);
@@ -531,7 +541,17 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    public boolean isOpaque() {
+        return true;
+    }
+
+    @Override
+    public boolean hasOverlappingRendering() {
+        return false;
+    }
+
+    @Override
+    protected void onDraw(final Canvas canvas) {
         drawContent(canvas);
         if (consoleInput != null) {
             if (mBlinkState && consoleInput.cursorVisibility) canvas.drawRect(getBufferDrawRect(
@@ -545,7 +565,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     protected void drawContent(final Canvas canvas) {
         if (consoleInput != null) {
 //            canvas.drawColor(charAttrs.bgColor);
-            Rect rect = getBufferTextRect(0, 0, getWidth(), getHeight());
+            final Rect rect = getBufferTextRect(0, 0, getWidth(), getHeight());
             for (int j = rect.top; j < rect.bottom; j++) {
                 int i = 0;
                 while (i < getCols()) {
@@ -553,7 +573,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
                     final float strBottom = (j - scrollPosition.y + 1) * mFontHeight;
                     consoleInput.currScrBuf.getAttrs(i, j, charAttrs);
                     applyCharAttrs();
-                    CharSequence s = consoleInput.currScrBuf.getChars(i, j);
+                    final CharSequence s = consoleInput.currScrBuf.getChars(i, j);
                     if (s == null) {
                         canvas.drawRect(i * mFontWidth, strTop, getWidth(), strBottom, bgPaint);
                         break;

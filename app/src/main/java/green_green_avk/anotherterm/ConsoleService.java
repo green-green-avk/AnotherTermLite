@@ -15,6 +15,7 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -160,13 +161,13 @@ public final class ConsoleService extends Service {
             }
 
             @Override
-            public void onRead(final byte[] v) {
+            public void onRead(@NonNull final ByteBuffer v) {
                 ci.feed(v);
                 ci.invalidateSink();
             }
 
             @Override
-            public void onError(final Throwable e) {
+            public void onError(@NonNull final Throwable e) {
 //                ci.currScrBuf.setChars(e.toString());
                 tbe.getUi().showMessage(e.getMessage());
             }

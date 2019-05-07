@@ -553,6 +553,16 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
     }
 
     @Override
+    public boolean isOpaque() {
+        return true;
+    }
+
+    @Override
+    public boolean hasOverlappingRendering() {
+        return false;
+    }
+
+    @Override
     protected void onDraw(final Canvas canvas) {
         super.onDraw(canvas);
         if (mHidden) return;

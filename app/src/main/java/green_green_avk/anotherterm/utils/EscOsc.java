@@ -2,6 +2,7 @@ package green_green_avk.anotherterm.utils;
 
 import android.support.annotation.NonNull;
 
+import java.nio.CharBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -12,7 +13,7 @@ public final class EscOsc {
     public final String body;
     public final String[] args;
 
-    public EscOsc(@NonNull final String v) throws IllegalArgumentException {
+    public EscOsc(@NonNull final CharBuffer v) throws IllegalArgumentException {
         final Matcher m = PAT.matcher(v);
         if (!m.matches()) throw new IllegalArgumentException("len=" + v.length());
         body = m.group(1);

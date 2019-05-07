@@ -766,7 +766,7 @@ public final class TermSh {
                             be.setContext(ui.ctx);
                             be.setOnMessageListener(new BackendModule.OnMessageListener() {
                                 @Override
-                                public void onMessage(final Object msg) {
+                                public void onMessage(@NonNull final Object msg) {
                                     if (msg instanceof Throwable) {
                                         try {
                                             shellCmd.stdErr.write(Misc.toUTF8(((Throwable) msg)

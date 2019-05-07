@@ -28,17 +28,19 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
 
 //    protected final SpannableStringBuilder softEditable = new SpannableStringBuilder();
 
-    public ConsoleKeyboardView(Context context, AttributeSet attrs) {
+    public ConsoleKeyboardView(final Context context, final AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public ConsoleKeyboardView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public ConsoleKeyboardView(final Context context, final AttributeSet attrs,
+                               final int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }
 
-    public ConsoleKeyboardView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public ConsoleKeyboardView(final Context context, final AttributeSet attrs,
+                               final int defStyleAttr, final int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
         init();
     }
@@ -66,7 +68,7 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
         requestFocus();
     }
 
-    private void applyConfig(Configuration cfg) {
+    private void applyConfig(final Configuration cfg) {
         final Resources res = getContext().getResources();
         final float keyW = cfg.screenWidthDp / cfg.fontScale / 20;
         final int kbdRes =
@@ -80,7 +82,7 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
         }
     }
 
-    public void setConsoleOutput(ConsoleOutput consoleOutput) {
+    public void setConsoleOutput(final ConsoleOutput consoleOutput) {
         this.consoleOutput = consoleOutput;
     }
 
@@ -93,7 +95,7 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
         return consoleOutput == null || consoleOutput.keyAutorepeat;
     }
 
-    public void clipboardPaste(String v) {
+    public void clipboardPaste(final String v) {
         if (consoleOutput == null) return;
         consoleOutput.paste(v);
     }
@@ -110,7 +112,7 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
     }
 
     @Override
-    public void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+    public void onMeasure(final int widthMeasureSpec, final int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         if (mHidden || !trackIme) return;
         if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) return;
@@ -124,14 +126,14 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
     }
 
     @Override
-    public void onSizeChanged(int w, int h, int oldw, int oldh) {
+    public void onSizeChanged(final int w, final int h, final int oldw, final int oldh) {
         super.onSizeChanged(w, trackIme ? getDesiredHeight() : h, oldw, oldh);
     }
 
     protected boolean imeIsShown = false;
 
     @Override
-    protected void onWindowVisibilityChanged(int visibility) {
+    protected void onWindowVisibilityChanged(final int visibility) {
         super.onWindowVisibilityChanged(visibility);
         if (visibility == VISIBLE) {
             if (isHidden()) useIme(true);
@@ -169,7 +171,7 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
         }
     };
 
-    protected void showIme(boolean v) {
+    protected void showIme(final boolean v) {
         mHandler.removeCallbacks(rShowSelf);
         mHandler.removeCallbacks(rHideSelf);
         if (v) {
@@ -194,7 +196,7 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
         return isHidden();
     }
 
-    public void useIme(boolean v) {
+    public void useIme(final boolean v) {
         if (getResources().getConfiguration().hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_YES)
             showIme(v); // Hardware keyboard backspace key suppression bug workaround
         else
@@ -202,7 +204,7 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
     }
 
     @Override
-    public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
+    public InputConnection onCreateInputConnection(final EditorInfo outAttrs) {
         outAttrs.actionLabel = null;
         outAttrs.inputType = InputType.TYPE_NULL;
         outAttrs.imeOptions = EditorInfo.IME_ACTION_NONE;
@@ -215,7 +217,7 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
                         }
             */
             @Override
-            public boolean sendKeyEvent(KeyEvent event) {
+            public boolean sendKeyEvent(final KeyEvent event) {
                 if (event.getAction() != KeyEvent.ACTION_UP) return true;
 //                Log.w("Soft_input", Character.toString((char) event.getUnicodeChar(event.getMetaState())));
                 if (consoleOutput != null) consoleOutput.feed(event);
@@ -223,7 +225,7 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
             }
 
             @Override
-            public boolean commitText(CharSequence text, int newCursorPosition) {
+            public boolean commitText(final CharSequence text, final int newCursorPosition) {
 //                Log.w("Soft_input (commit)", text.toString());
                 if (consoleOutput != null) consoleOutput.feed(text.toString());
                 return super.commitText(text, newCursorPosition);
@@ -238,14 +240,14 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
     }
 
     @Override
-    protected void onConfigurationChanged(Configuration newConfig) {
+    protected void onConfigurationChanged(final Configuration newConfig) {
 //        Log.i("onConfigurationChanged", String.format("kh: %04X; hkh: %04X", newConfig.keyboardHidden, newConfig.hardKeyboardHidden));
         applyConfig(newConfig);
         super.onConfigurationChanged(newConfig);
     }
 
     @Override
-    public void onPress(int primaryCode) {
+    public void onPress(final int primaryCode) {
         switch (primaryCode) {
             case ExtKeyboard.KEYCODE_NONE:
                 return;
@@ -279,7 +281,7 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
 //    }
 
     @Override
-    public void onKey(int primaryCode, int[] keyCodes) {
+    public void onKey(final int primaryCode, final int[] keyCodes) {
         switch (primaryCode) {
             case ExtKeyboard.KEYCODE_NONE:
                 return;
@@ -315,11 +317,11 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
     }
 
     @Override
-    public void onRelease(int primaryCode) {
+    public void onRelease(final int primaryCode) {
     }
 
     @Override
-    public void onText(CharSequence text) {
+    public void onText(final CharSequence text) {
         consoleOutput.feed(text.toString());
     }
 

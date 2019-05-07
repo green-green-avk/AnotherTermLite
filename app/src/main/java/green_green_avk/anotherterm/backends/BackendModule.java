@@ -141,7 +141,7 @@ public abstract class BackendModule {
     public abstract OutputStream getOutputStream();
 
     public interface OnMessageListener {
-        void onMessage(Object msg);
+        void onMessage(@NonNull Object msg);
     }
 
     public abstract void setOnMessageListener(OnMessageListener l);

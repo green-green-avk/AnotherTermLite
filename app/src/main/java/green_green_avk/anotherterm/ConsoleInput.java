@@ -8,6 +8,7 @@ import android.util.SparseBooleanArray;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Iterator;
@@ -17,24 +18,25 @@ import java.util.TreeSet;
 import java.util.WeakHashMap;
 
 import green_green_avk.anotherterm.backends.EventBasedBackendModuleWrapper;
+import green_green_avk.anotherterm.utils.BinderInputStream;
 import green_green_avk.anotherterm.utils.BytesSink;
 import green_green_avk.anotherterm.utils.EscCsi;
 import green_green_avk.anotherterm.utils.EscOsc;
 import green_green_avk.anotherterm.utils.InputTokenizer;
-import green_green_avk.anotherterm.utils.IovecInputStream;
 import green_green_avk.anotherterm.utils.Misc;
 
 public final class ConsoleInput implements BytesSink {
+    private static final boolean LOG_UNKNOWN_ESC = false; // BuildConfig.DEBUG
+
     public ConsoleOutput consoleOutput = null;
     public EventBasedBackendModuleWrapper backendModule = null;
     public ConsoleScreenBuffer currScrBuf;
     private final ConsoleScreenBuffer mainScrBuf;
     private final ConsoleScreenBuffer altScrBuf;
     private final ConsoleScreenCharAttrs mCurrAttrs = new ConsoleScreenCharAttrs();
-    private final IovecInputStream mChunkedInput = new IovecInputStream();
+    private final BinderInputStream mInputBuf = new BinderInputStream(1024);
     private InputStreamReader mStrConv;
     private final InputTokenizer mInputTokenizer = new InputTokenizer();
-    private final char[] buf = new char[8192];
 
     public boolean insertMode = false;
     public boolean cursorVisibility = true; // DECTECM
@@ -54,7 +56,7 @@ public final class ConsoleInput implements BytesSink {
     }
 
     public void setCharset(final Charset ch) {
-        mStrConv = new InputStreamReader(mChunkedInput, ch);
+        mStrConv = new InputStreamReader(mInputBuf, ch);
     }
 
     public interface OnInvalidateSink {
@@ -158,15 +160,15 @@ public final class ConsoleInput implements BytesSink {
         tabPositions.add(pos);
     }
 
-    public void feed(@NonNull final byte[] v) {
-        if (v.length == 0) return;
-        mChunkedInput.add(v);
+    @Override
+    public void feed(@NonNull final ByteBuffer v) {
+        if (v.remaining() == 0) return;
+        mInputBuf.bind(v);
         try {
             while (mStrConv.ready()) {
-                final int len = mStrConv.read(buf);
-                mInputTokenizer.tokenize(buf, 0, len);
+                mInputTokenizer.tokenize(mStrConv);
                 for (final InputTokenizer.Token t : mInputTokenizer) {
-//                    Log.v("CtrlSeq/Note", t.type + ": " + t.value);
+//                    Log.v("CtrlSeq/Note", t.type + ": " + t.value.toString());
                     switch (t.type) {
                         case OSC: {
                             EscOsc osc = new EscOsc(t.value);
@@ -179,8 +181,8 @@ public final class ConsoleInput implements BytesSink {
                                 }
                                 break;
                             }
-                            if (BuildConfig.DEBUG)
-                                Log.w("CtrlSeq", "OSC: " + t.value);
+                            if (LOG_UNKNOWN_ESC)
+                                Log.w("CtrlSeq", "OSC: " + t.value.toString());
                             break;
                         }
                         case CSI:
@@ -216,8 +218,9 @@ public final class ConsoleInput implements BytesSink {
                                     mCurrAttrs.reset();
                                     break;
                                 default:
-                                    if (BuildConfig.DEBUG)
-                                        Log.w("CtrlSeq", "ESC: " + t.value.substring(1));
+                                    if (LOG_UNKNOWN_ESC)
+                                        Log.w("CtrlSeq", "ESC: " +
+                                                t.value.subSequence(1, t.value.remaining()).toString());
                             }
                             break;
                         case CTL:
@@ -240,7 +243,7 @@ public final class ConsoleInput implements BytesSink {
                                     // TODO: Bell
                                     break;
                                 default:
-                                    if (BuildConfig.DEBUG)
+                                    if (LOG_UNKNOWN_ESC)
                                         Log.w("CtrlSeq", "CTL: " + (int) t.value.charAt(0));
                             }
                             break;
@@ -252,9 +255,11 @@ public final class ConsoleInput implements BytesSink {
                     }
                 }
             }
-        } catch (IOException e) {
+        } catch (final IOException e) {
             if (BuildConfig.DEBUG)
                 Log.e("-", "Strange IO error", e);
+        } finally {
+            mInputBuf.release();
         }
     }
 
@@ -423,7 +428,7 @@ public final class ConsoleInput implements BytesSink {
                                         );
                                         break;
                                     }
-                                    if (BuildConfig.DEBUG)
+                                    if (LOG_UNKNOWN_ESC)
                                         Log.w("CtrlSeq", "Attr: " + a);
                             }
                         }
@@ -493,7 +498,7 @@ public final class ConsoleInput implements BytesSink {
                 }
                 break;
         }
-        if (BuildConfig.DEBUG)
+        if (LOG_UNKNOWN_ESC)
             Log.w("CtrlSeq", "ESC[" + ((csi.prefix == 0) ? "" : csi.prefix) + csi.body + csi.type);
     }
 
@@ -587,7 +592,7 @@ public final class ConsoleInput implements BytesSink {
                         consoleOutput.bracketedPasteMode = value;
                     return;
             }
-            if (BuildConfig.DEBUG)
+            if (LOG_UNKNOWN_ESC)
                 Log.w("CtrlSeq", "DecPrivateMode: " + opt + " = " + value);
         }
 
