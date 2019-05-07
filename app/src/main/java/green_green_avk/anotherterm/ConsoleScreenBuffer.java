@@ -162,13 +162,13 @@ public final class ConsoleScreenBuffer {
         return CharBuffer.wrap(row.text, x, len);
     }
 
-    private int getSameAttrLen(final int[] attrs, int start, final int end) {
+    private int getSameAttrLen(@NonNull final int[] attrs, final int start, final int end) {
         final int v = attrs[start];
-        ++start;
-        for (; start < end; ++start) {
-            if (attrs[start] != v) break;
+        int pos = start + 1;
+        for (; pos < end; ++pos) {
+            if (attrs[pos] != v) break;
         }
-        return start;
+        return pos - start;
     }
 
     public CharSequence getChars(final int x, final int y) {

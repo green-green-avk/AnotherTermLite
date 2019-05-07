@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -17,6 +18,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.SubMenu;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.nio.charset.Charset;
@@ -65,7 +67,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
     private GestureDetector mGestureDetector;
 
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
+    public boolean onTouchEvent(final MotionEvent event) {
         return mGestureDetector.onTouchEvent(event) || super.onTouchEvent(event);
     }
 
@@ -84,8 +86,20 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
     */
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onMultiWindowModeChanged(boolean isInMultiWindowMode) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode);
+        getWindow().setFlags(isInMultiWindowMode ? 0 : WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    }
+
+    @Override
+    protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (isInMultiWindowMode())
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
 
         toolbarIconColor = getResources().getColorStateList(R.color.console_toolbar_icon);
 
@@ -199,7 +213,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
     private Menu mMenu = null;
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(final Menu menu) {
         getMenuInflater().inflate(R.menu.menu_console, menu);
         mMenu = menu;
         for (int mii = 0; mii < mMenu.size(); ++mii)
@@ -242,7 +256,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
     }
 
     @Override
-    public void onInvalidateSink(Rect rect) {
+    public void onInvalidateSink(final Rect rect) {
         if (mSession != null) {
             final boolean ms = mSession.output.isMouseSupported();
             if (!ms) turnOffMouseMode();
@@ -277,7 +291,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(final MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_mouse: {
                 mCsv.setMouseMode(!mCsv.getMouseMode());
@@ -382,17 +396,17 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
     final MouseButtonsWorkAround mbwa = new MouseButtonsWorkAround(this);
 
     @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
+    public boolean dispatchTouchEvent(final MotionEvent ev) {
         return mbwa.onDispatchTouchEvent(ev) ? mbwa.result : super.dispatchTouchEvent(ev);
     }
 
     @Override
-    public boolean dispatchGenericMotionEvent(MotionEvent ev) {
+    public boolean dispatchGenericMotionEvent(final MotionEvent ev) {
         return mbwa.onDispatchGenericMotionEvent(ev) ? mbwa.result : super.dispatchGenericMotionEvent(ev);
     }
 
     @Override
-    public boolean dispatchKeyEvent(KeyEvent event) {
+    public boolean dispatchKeyEvent(final KeyEvent event) {
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             switch (event.getKeyCode()) {
                 case KeyEvent.KEYCODE_VOLUME_UP: {

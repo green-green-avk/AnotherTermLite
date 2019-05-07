@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
+import android.os.ParcelFileDescriptor;
 import android.os.Process;
 import android.provider.OpenableColumns;
 import android.support.annotation.NonNull;
@@ -182,7 +183,6 @@ public final class TermSh {
             private final Object closeLock = new Object();
             private final LocalSocket socket;
             private final InputStream cis;
-            private final FileDescriptor[] ioFds;
             @NonNull
             private final InputStream stdIn;
             @NonNull
@@ -220,16 +220,20 @@ public final class TermSh {
                 private Utils21() {
                 }
 
+                private static void close(final FileDescriptor fd) {
+                    if (fd.valid()) {
+                        try {
+                            Os.close(fd);
+                        } catch (final ErrnoException e) {
+                            Log.e("TermShServer", "Request", e);
+                        }
+                    }
+                }
+
                 private static void close(final FileDescriptor[] fds) {
                     if (fds != null) {
                         for (final FileDescriptor fd : fds) {
-                            if (fd.valid()) {
-                                try {
-                                    Os.close(fd);
-                                } catch (final ErrnoException e) {
-                                    Log.e("TermShServer", "Request", e);
-                                }
-                            }
+                            close(fd);
                         }
                     }
                 }
@@ -251,16 +255,14 @@ public final class TermSh {
                         if (stdErr != null) stdErr.close();
                     } catch (final IOException ignored) {
                     }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-                        Utils21.close(ioFds); // For API >= 28
-                    try {
-                        socket.close();
-                    } catch (final IOException ignored) {
-                    }
                 }
             }
 
-            // TODO: ParcelFileDescriptor?
+            /*
+             * Just make a hack for old versions and if it fails (API >= 28),
+             * use ParcelFileDescriptor and android.system.Os.close()
+             * as the last one is available in API >= 21.
+             */
 
             @NonNull
             private static FileInputStream wrapInputFD(final FileDescriptor fd) {
@@ -268,15 +270,20 @@ public final class TermSh {
                     return FileInputStream.class
                             .getConstructor(FileDescriptor.class, boolean.class)
                             .newInstance(fd, true);
-                } catch (final IllegalAccessException e) {
-                    return new FileInputStream(fd);
-                } catch (final InstantiationException e) {
-                    return new FileInputStream(fd);
-                } catch (final InvocationTargetException e) {
-                    return new FileInputStream(fd);
-                } catch (final NoSuchMethodException e) {
-                    return new FileInputStream(fd);
+                } catch (final IllegalAccessException ignored) {
+                } catch (final InstantiationException ignored) {
+                } catch (final InvocationTargetException ignored) {
+                } catch (final NoSuchMethodException ignored) {
                 }
+                try {
+                    final ParcelFileDescriptor pfd = ParcelFileDescriptor.dup(fd);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        Utils21.close(fd);
+                    }
+                    return new ParcelFileDescriptor.AutoCloseInputStream(pfd);
+                } catch (final IOException ignored) {
+                }
+                return new FileInputStream(fd);
             }
 
             @NonNull
@@ -285,15 +292,20 @@ public final class TermSh {
                     return FileOutputStream.class
                             .getConstructor(FileDescriptor.class, boolean.class)
                             .newInstance(fd, true);
-                } catch (final IllegalAccessException e) {
-                    return new FileOutputStream(fd);
-                } catch (final InstantiationException e) {
-                    return new FileOutputStream(fd);
-                } catch (final InvocationTargetException e) {
-                    return new FileOutputStream(fd);
-                } catch (final NoSuchMethodException e) {
-                    return new FileOutputStream(fd);
+                } catch (final IllegalAccessException ignored) {
+                } catch (final InstantiationException ignored) {
+                } catch (final InvocationTargetException ignored) {
+                } catch (final NoSuchMethodException ignored) {
                 }
+                try {
+                    final ParcelFileDescriptor pfd = ParcelFileDescriptor.dup(fd);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        Utils21.close(fd);
+                    }
+                    return new ParcelFileDescriptor.AutoCloseOutputStream(pfd);
+                } catch (final IOException ignored) {
+                }
+                return new FileOutputStream(fd);
             }
 
             @NonNull
@@ -337,7 +349,7 @@ public final class TermSh {
                 cis = socket.getInputStream();
                 currDir = parsePwd(cis);
                 args = parseArgs(cis);
-                ioFds = socket.getAncillaryFileDescriptors();
+                final FileDescriptor[] ioFds = socket.getAncillaryFileDescriptors();
                 if (ioFds == null || ioFds.length != 3)
                     throw new ParseException("No file descriptors");
                 stdIn = wrapInputFD(ioFds[0]);

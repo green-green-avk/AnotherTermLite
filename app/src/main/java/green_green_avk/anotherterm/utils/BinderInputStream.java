@@ -19,8 +19,8 @@ public final class BinderInputStream extends InputStream {
     }
 
     public void release() {
+        leftovers.compact();
         try {
-            leftovers.compact();
             leftovers.put(boundBuffer);
         } finally {
             boundBuffer = null;
