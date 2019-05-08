@@ -10,7 +10,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <syslog.h>
+#include <poll.h>
+
+#include <android/log.h>
 
 #include "common.h"
 
@@ -21,6 +23,7 @@
 static jclass g_OOMEC;
 static jclass g_runtimeEC;
 static jclass g_IOEC;
+static jclass g_IntIOEC;
 
 class cStrError {
 private:
@@ -137,7 +140,8 @@ m_execve(JNIEnv *const env, const jobject jthis,
     }
     if (envp == nullptr) execv(filename, args);
     else execve(filename, args, envp);
-    syslog(LOG_ERR, "[errno: %d] %s [%s]", errno, strError("Exec failed"), filename);
+    __android_log_print(ANDROID_LOG_ERROR, CLASS_NAME,
+                        "[errno: %d] %s [%s]", errno, strError("Exec failed"), filename);
     _exit(127);
 }
 
@@ -230,20 +234,46 @@ static void JNICALL m_writeBuf(JNIEnv *const env, const jobject jthis,
     }
 }
 
+static jboolean JNICALL m_pollForRead(JNIEnv *const env, const jobject jthis,
+                                      const jint fd, const jint intFd) {
+    struct pollfd pfds[] = {
+            {fd,    POLLIN, 0},
+            {intFd, POLLIN, 0}
+    };
+    if (poll(pfds, 2, -1) < 0) {
+        switch (errno) {
+            case EINTR:
+                env->ThrowNew(g_IntIOEC, strError("pollForRead"));
+                break;
+            case ENOMEM:
+                env->ThrowNew(g_OOMEC, strError("pollForRead"));
+                break;
+            default:
+                env->ThrowNew(g_IOEC, strError("pollForRead"));
+        }
+        return JNI_TRUE;
+    }
+    if (pfds[1].revents != 0 || pfds[0].revents != POLLIN) {
+        return JNI_TRUE;
+    }
+    return JNI_FALSE;
+}
+
 static jlong JNICALL m_getArgMax(JNIEnv *const env, const jobject jthis) {
     return sysconf(_SC_ARG_MAX);
 }
 
-static JNINativeMethod methodTable[] = {
-        {"execve",    "(Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;)L" CLASS_NAME ";",
-                                 (void *) m_execve},
-        {"destroy",   "()V",     (void *) m_destroy},
-        {"resize",    "(IIII)V", (void *) m_resize},
-        {"readByte",  "()I",     (void *) m_readByte},
-        {"readBuf",   "([BII)I", (void *) m_readBuf},
-        {"writeByte", "(I)V",    (void *) m_writeByte},
-        {"writeBuf",  "([BII)V", (void *) m_writeBuf},
-        {"getArgMax", "()J",     (void *) m_getArgMax}
+static const JNINativeMethod methodTable[] = {
+        {"execve",      "(Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;)L" CLASS_NAME ";",
+                                   (void *) m_execve},
+        {"destroy",     "()V",     (void *) m_destroy},
+        {"resize",      "(IIII)V", (void *) m_resize},
+        {"readByte",    "()I",     (void *) m_readByte},
+        {"readBuf",     "([BII)I", (void *) m_readBuf},
+        {"writeByte",   "(I)V",    (void *) m_writeByte},
+        {"writeBuf",    "([BII)V", (void *) m_writeBuf},
+        {"pollForRead", "(II)Z",   (void *) m_pollForRead},
+        {"getArgMax",   "()J",     (void *) m_getArgMax}
 };
 
 extern "C"
@@ -258,6 +288,8 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *const vm, void *const reserved) {
     g_runtimeEC = (jclass) env->NewGlobalRef(env->FindClass("java/lang/RuntimeException"));
     if (env->ExceptionCheck() == JNI_TRUE) return -1;
     g_IOEC = (jclass) env->NewGlobalRef(env->FindClass("java/io/IOException"));
+    if (env->ExceptionCheck() == JNI_TRUE) return -1;
+    g_IntIOEC = (jclass) env->NewGlobalRef(env->FindClass("java/io/InterruptedIOException"));
     if (env->ExceptionCheck() == JNI_TRUE) return -1;
 
     g_class = (jclass) env->NewGlobalRef(env->FindClass(CLASS_NAME));
@@ -281,6 +313,7 @@ JNIEXPORT void JNI_OnUnload(JavaVM *const vm, void *const reserved) {
 
     env->DeleteGlobalRef(g_class);
 
+    env->DeleteGlobalRef(g_IntIOEC);
     env->DeleteGlobalRef(g_IOEC);
     env->DeleteGlobalRef(g_runtimeEC);
     env->DeleteGlobalRef(g_OOMEC);

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import green_green_avk.anotherterm.R;
 import green_green_avk.anotherterm.backends.BackendException;
 import green_green_avk.anotherterm.backends.BackendModule;
 import green_green_avk.anotherterm.utils.BlockingSync;
@@ -172,6 +173,9 @@ public final class UsbUartModule extends BackendModule {
                     // reconnect
                     final UsbDevice dev = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     if (mIsConnected && device.equals(dev)) {
+                        getUi().showToast(context.getString(
+                                R.string.msg_usd_serial_port_s_reconnected,
+                                dev.getDeviceName()));
                         final Thread t = new Thread() {
                             @Override
                             public void run() {
@@ -187,7 +191,12 @@ public final class UsbUartModule extends BackendModule {
                     break;
                 }
                 case ACTION_USB_DETACHED:
-                    // TODO: some message
+                    final UsbDevice dev = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                    if (mIsConnected && device.equals(dev)) {
+                        getUi().showToast(context.getString(
+                                R.string.msg_usd_serial_port_s_disconnected,
+                                dev.getDeviceName()));
+                    }
                     break;
             }
         }
@@ -283,7 +292,7 @@ public final class UsbUartModule extends BackendModule {
             device = dev;
             return;
         }
-        throw new BackendException("No supported USB UARTs found");
+        throw new BackendException("No supported USB serial ports found");
     }
 
     private void makeConnection(final boolean reconnect) {
@@ -300,7 +309,7 @@ public final class UsbUartModule extends BackendModule {
                 disconnect();
                 throw new BackendException("Permission denied for device " + device);
             }
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
             disconnect();
             throw new BackendException("UI request interrupted");
         }

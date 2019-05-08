@@ -1,5 +1,6 @@
 package green_green_avk.ptyprocess;
 
+import android.os.ParcelFileDescriptor;
 import android.support.annotation.Keep;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -155,7 +156,77 @@ public final class PtyProcess extends Process {
         }
     };
 
+    public static final class InterruptableFileInputStream
+            extends ParcelFileDescriptor.AutoCloseInputStream {
+        private volatile boolean closed = false;
+        private final ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
+        private final ParcelFileDescriptor pfd;
+
+        public InterruptableFileInputStream(final ParcelFileDescriptor pfd) throws IOException {
+            super(pfd);
+            this.pfd = pfd;
+        }
+
+        private void interrupt() throws IOException {
+            pipe[1].close();
+        }
+
+        private void interruptQuiet() {
+            try {
+                interrupt();
+            } catch (final IOException ignored) {
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+            closed = true;
+            super.close();
+            interruptQuiet();
+        }
+
+        private boolean check() throws IOException {
+            return pollForRead(pfd.getFd(), pipe[0].getFd());
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (check()) return -1;
+            try {
+                return super.read();
+            } catch (final IOException e) {
+                if (!closed) throw e;
+                return -1;
+            }
+        }
+
+        @Override
+        public int read(byte[] b) throws IOException {
+            if (check()) return -1;
+            try {
+                return super.read(b);
+            } catch (final IOException e) {
+                if (!closed) throw e;
+                return -1;
+            }
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (check()) return -1;
+            try {
+                return super.read(b, off, len);
+            } catch (final IOException e) {
+                if (!closed) throw e;
+                return -1;
+            }
+        }
+    }
+
     // Actual only before API 21
+    @Keep
+    public static native boolean pollForRead(int fd, int intFd) throws IOException;
+
     @Keep
     public static native long getArgMax();
 }

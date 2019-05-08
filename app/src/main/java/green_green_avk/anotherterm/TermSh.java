@@ -47,9 +47,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import green_green_avk.anotherterm.backends.BackendException;
 import green_green_avk.anotherterm.backends.BackendModule;
 import green_green_avk.anotherterm.backends.usbUart.UsbUartModule;
+import green_green_avk.anotherterm.ui.BackendUiShell;
 import green_green_avk.anotherterm.utils.BinaryGetOpts;
 import green_green_avk.anotherterm.utils.BlockingSync;
 import green_green_avk.anotherterm.utils.Misc;
+import green_green_avk.ptyprocess.PtyProcess;
 
 public final class TermSh {
     private static final String USER_NOTIFICATION_CHANNEL_ID =
@@ -269,29 +271,21 @@ public final class TermSh {
                 }
             }
 
-            /*
-             * Just make a hack for old versions and if it fails (API >= 28 or API < some version),
-             * use ParcelFileDescriptor and android.system.Os.close()
-             * (as the last one is available in API >= 21) or another hack to close the descriptor.
-             * Alas! ParcelFileDescriptor provides no methods to notify AsynchronousCloseMonitor
-             * of pending read() threads...
-             * TODO: implement some gentle hack for pending read() thread notification
-             */
+            // TODO: better remove fallbacks
 
             @NonNull
             private static FileInputStream wrapInputFD(final FileDescriptor fd) {
                 try {
-                    return FileInputStream.class
-                            .getConstructor(FileDescriptor.class, boolean.class)
-                            .newInstance(fd, true);
-                } catch (final IllegalAccessException ignored) {
-                } catch (final InstantiationException ignored) {
-                } catch (final InvocationTargetException ignored) {
-                } catch (final NoSuchMethodException ignored) {
-                }
-                try {
                     final ParcelFileDescriptor pfd = ParcelFileDescriptor.dup(fd);
-                    close(fd);
+                    try {
+                        close(fd);
+                    } catch (final IOException ignored) {
+                    }
+                    try {
+                        return new PtyProcess.InterruptableFileInputStream(pfd);
+                    } catch (final IOException e) {
+                        Log.e("TermShServer", "Request", e);
+                    }
                     return new ParcelFileDescriptor.AutoCloseInputStream(pfd);
                 } catch (final IOException e) {
                     Log.e("TermShServer", "Request", e);
@@ -302,17 +296,11 @@ public final class TermSh {
             @NonNull
             private static FileOutputStream wrapOutputFD(final FileDescriptor fd) {
                 try {
-                    return FileOutputStream.class
-                            .getConstructor(FileDescriptor.class, boolean.class)
-                            .newInstance(fd, true);
-                } catch (final IllegalAccessException ignored) {
-                } catch (final InstantiationException ignored) {
-                } catch (final InvocationTargetException ignored) {
-                } catch (final NoSuchMethodException ignored) {
-                }
-                try {
                     final ParcelFileDescriptor pfd = ParcelFileDescriptor.dup(fd);
-                    close(fd);
+                    try {
+                        close(fd);
+                    } catch (final IOException ignored) {
+                    }
                     return new ParcelFileDescriptor.AutoCloseOutputStream(pfd);
                 } catch (final IOException e) {
                     Log.e("TermShServer", "Request", e);
@@ -800,7 +788,9 @@ public final class TermSh {
                                     }
                                 }
                             });
-                            // be.setUi(); // TODO: Maybe...
+                            final BackendUiShell ui = new BackendUiShell();
+                            ui.setIO(shellCmd.stdIn, shellCmd.stdOut, shellCmd.stdErr);
+                            be.setUi(ui);
                             be.setOutputStream(shellCmd.stdOut);
                             final OutputStream toBe = be.getOutputStream();
                             try {
