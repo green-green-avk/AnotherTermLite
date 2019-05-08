@@ -113,7 +113,7 @@ public final class PtyProcess extends Process {
     @Keep
     public native void resize(int width, int height, int widthPx, int heightPx);
 
-    // TODO: Or FileDescriptor / File Streams?
+    // TODO: Or ParcelFileDescriptor / File Streams?
 
     @Keep
     private native int readByte() throws IOException;

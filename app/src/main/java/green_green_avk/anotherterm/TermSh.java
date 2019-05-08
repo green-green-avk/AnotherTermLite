@@ -220,22 +220,33 @@ public final class TermSh {
                 private Utils21() {
                 }
 
-                private static void close(final FileDescriptor fd) {
+                private static void close(@NonNull final FileDescriptor fd) throws IOException {
                     if (fd.valid()) {
                         try {
                             Os.close(fd);
                         } catch (final ErrnoException e) {
-                            Log.e("TermShServer", "Request", e);
+                            throw new IOException(e.getMessage(), e);
                         }
                     }
                 }
+            }
 
-                private static void close(final FileDescriptor[] fds) {
-                    if (fds != null) {
-                        for (final FileDescriptor fd : fds) {
-                            close(fd);
-                        }
+            private static void close(@NonNull final FileDescriptor fd) throws IOException {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    Utils21.close(fd);
+                } else {
+                    final int _fd;
+                    try {
+                        _fd = (int) FileDescriptor.class.getMethod("getInt$").invoke(fd);
+                    } catch (final IllegalAccessException e) {
+                        throw new IOException("Cannot close temporary socket: workaround failed");
+                    } catch (final InvocationTargetException e) {
+                        throw new IOException("Cannot close temporary socket: workaround failed");
+                    } catch (final NoSuchMethodException e) {
+                        throw new IOException("Cannot close temporary socket: workaround failed");
                     }
+                    // I see no reason to implement a native method here.
+                    ParcelFileDescriptor.adoptFd(_fd).close();
                 }
             }
 
@@ -259,9 +270,12 @@ public final class TermSh {
             }
 
             /*
-             * Just make a hack for old versions and if it fails (API >= 28),
+             * Just make a hack for old versions and if it fails (API >= 28 or API < some version),
              * use ParcelFileDescriptor and android.system.Os.close()
-             * as the last one is available in API >= 21.
+             * (as the last one is available in API >= 21) or another hack to close the descriptor.
+             * Alas! ParcelFileDescriptor provides no methods to notify AsynchronousCloseMonitor
+             * of pending read() threads...
+             * TODO: implement some gentle hack for pending read() thread notification
              */
 
             @NonNull
@@ -277,11 +291,10 @@ public final class TermSh {
                 }
                 try {
                     final ParcelFileDescriptor pfd = ParcelFileDescriptor.dup(fd);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        Utils21.close(fd);
-                    }
+                    close(fd);
                     return new ParcelFileDescriptor.AutoCloseInputStream(pfd);
-                } catch (final IOException ignored) {
+                } catch (final IOException e) {
+                    Log.e("TermShServer", "Request", e);
                 }
                 return new FileInputStream(fd);
             }
@@ -299,11 +312,10 @@ public final class TermSh {
                 }
                 try {
                     final ParcelFileDescriptor pfd = ParcelFileDescriptor.dup(fd);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        Utils21.close(fd);
-                    }
+                    close(fd);
                     return new ParcelFileDescriptor.AutoCloseOutputStream(pfd);
-                } catch (final IOException ignored) {
+                } catch (final IOException e) {
+                    Log.e("TermShServer", "Request", e);
                 }
                 return new FileOutputStream(fd);
             }
