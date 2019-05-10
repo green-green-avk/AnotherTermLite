@@ -196,10 +196,10 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
             finish();
             return;
         }
-        ((BackendUiInteractionActivityCtx) mSession.backend.wrapped.getUi()).setActivity(this);
         mCkv.setAutoRepeatAllowed(((App) getApplication()).settings.terminal_key_repeat);
         mCkv.setAutoRepeatDelay(((App) getApplication()).settings.terminal_key_repeat_delay);
         mCkv.setAutoRepeatInterval(((App) getApplication()).settings.terminal_key_repeat_interval);
+        ((BackendUiInteractionActivityCtx) mSession.backend.wrapped.getUi()).setActivity(this);
     }
 
     @Override

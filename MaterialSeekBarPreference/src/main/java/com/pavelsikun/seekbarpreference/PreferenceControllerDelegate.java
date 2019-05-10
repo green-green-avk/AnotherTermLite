@@ -15,7 +15,7 @@ import android.widget.TextView;
 
 /**
  * Created by Pavel Sikun on 28.05.16.
- * <p>
+ *
  * Changed by Aleksandr Kiselev
  */
 
@@ -152,7 +152,7 @@ final class PreferenceControllerDelegate implements SeekBar.OnSeekBarChangeListe
             String s = unit.apply(context, currentValue);
             if (!unit.isFormatted()) s = TextUtils.isEmpty(s)
                     ? Integer.toString(currentValue)
-                    : Integer.toString(currentValue) + " " + s;
+                    : currentValue + " " + s;
             valueView.setText(s);
         }
     }

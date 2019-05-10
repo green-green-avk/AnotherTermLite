@@ -6,6 +6,8 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.UiThread;
@@ -35,11 +37,15 @@ import green_green_avk.anotherterm.utils.LogMessage;
 import green_green_avk.anotherterm.utils.WeakBlockingSync;
 
 // TODO: Split into UI and UI thread connector queue classes
-public final class BackendUiDialogs implements BackendUiInteraction, BackendUiInteractionActivityCtx {
+public final class BackendUiDialogs implements BackendUiInteraction,
+        BackendUiInteractionActivityCtx {
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     private final WeakBlockingSync<Activity> ctxRef = new WeakBlockingSync<>();
 
-    private final Set<Dialog> dialogs = Collections.newSetFromMap(new WeakHashMap<Dialog, Boolean>());
+    private final Set<Dialog> dialogs = Collections.newSetFromMap(
+            new WeakHashMap<Dialog, Boolean>());
 
     private final Object promptLock = new Object();
     private volatile Runnable promptState = null;
@@ -92,11 +98,12 @@ public final class BackendUiDialogs implements BackendUiInteraction, BackendUiIn
     public String promptPassword(@NonNull final String message) throws InterruptedException {
         try {
             synchronized (promptLock) {
-                final Activity ctx = ctxRef.get();
                 final BlockingSync<String> result = new BlockingSync<>();
                 promptState = new Runnable() {
                     @Override
                     public void run() {
+                        final Activity ctx = ctxRef.getNoBlock();
+                        if (ctx == null) return;
                         final EditText et = new EditText(ctx);
                         final DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
                             @Override
@@ -120,7 +127,8 @@ public final class BackendUiDialogs implements BackendUiInteraction, BackendUiIn
                                 }
                             }
                         };
-                        et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                        et.setInputType(InputType.TYPE_CLASS_TEXT |
+                                InputType.TYPE_TEXT_VARIATION_PASSWORD);
                         final AlertDialog d = new AlertDialog.Builder(ctx)
                                 .setOnCancelListener(new DialogInterface.OnCancelListener() {
                                     @Override
@@ -168,7 +176,7 @@ public final class BackendUiDialogs implements BackendUiInteraction, BackendUiIn
                         dialogs.add(d);
                     }
                 };
-                ctx.runOnUiThread(promptState);
+                handler.post(promptState);
                 return result.get();
             }
         } finally {
@@ -180,11 +188,12 @@ public final class BackendUiDialogs implements BackendUiInteraction, BackendUiIn
     public boolean promptYesNo(@NonNull final String message) throws InterruptedException {
         try {
             synchronized (promptLock) {
-                final Activity ctx = ctxRef.get();
                 final BlockingSync<Boolean> result = new BlockingSync<>();
                 promptState = new Runnable() {
                     @Override
                     public void run() {
+                        final Activity ctx = ctxRef.getNoBlock();
+                        if (ctx == null) return;
                         final DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
@@ -215,7 +224,7 @@ public final class BackendUiDialogs implements BackendUiInteraction, BackendUiIn
                         dialogs.add(d);
                     }
                 };
-                ctx.runOnUiThread(promptState);
+                handler.post(promptState);
                 return result.get();
             }
         } finally {
@@ -225,24 +234,22 @@ public final class BackendUiDialogs implements BackendUiInteraction, BackendUiIn
 
     @Override
     public void showMessage(@NonNull final String message) {
-        synchronized (msgQueueLock) {
-            final Activity ctx = ctxRef.getNoBlock();
-            if (ctx == null) {
-                msgQueue.add(new LogMessage(message));
-                return;
-            }
-            ctx.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    synchronized (msgQueueLock) {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (msgQueueLock) {
+                    final Activity ctx = ctxRef.getNoBlock();
+                    if (ctx == null) {
                         msgQueue.add(new LogMessage(message));
-                        final MessageLogView.Adapter a = msgAdapterRef.get();
-                        if (a != null) a.notifyDataSetChanged();
-                        else showQueuedMessages(ctx);
+                        return;
                     }
+                    msgQueue.add(new LogMessage(message));
+                    final MessageLogView.Adapter a = msgAdapterRef.get();
+                    if (a != null) a.notifyDataSetChanged();
+                    else showQueuedMessages(ctx);
                 }
-            });
-        }
+            }
+        });
     }
 
     @Override
@@ -253,20 +260,23 @@ public final class BackendUiDialogs implements BackendUiInteraction, BackendUiIn
     }
 
     @Override
-    public byte[] promptContent(@NonNull final String message, @NonNull final String mimeType) throws InterruptedException {
+    public byte[] promptContent(@NonNull final String message, @NonNull final String mimeType)
+            throws InterruptedException {
         try {
             synchronized (promptLock) {
-                final Activity ctx = ctxRef.get();
                 final BlockingSync<byte[]> result = new BlockingSync<>();
                 promptState = new Runnable() {
                     @Override
                     public void run() {
+                        final Activity ctx = ctxRef.getNoBlock();
+                        if (ctx == null) return;
                         final DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
                                 if (which == DialogInterface.BUTTON_POSITIVE) {
                                     promptState = null;
-                                    ContentRequester.request(result, ContentRequester.Type.BYTES, ctx, message, mimeType);
+                                    ContentRequester.request(result, ContentRequester.Type.BYTES,
+                                            ctx, message, mimeType);
                                     dialog.dismiss();
                                 } else {
                                     dialog.cancel();
@@ -289,7 +299,7 @@ public final class BackendUiDialogs implements BackendUiInteraction, BackendUiIn
                         dialogs.add(d);
                     }
                 };
-                ctx.runOnUiThread(promptState);
+                handler.post(promptState);
                 return result.get();
             }
         } finally {

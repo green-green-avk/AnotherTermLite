@@ -7,6 +7,8 @@ import android.support.v4.app.FragmentActivity;
 import green_green_avk.anotherterm.utils.BlockingSync;
 
 public final class Permissions extends Requester {
+    private static final int[] EMPTY = new int[0];
+
     private Permissions() {
     }
 
@@ -14,6 +16,12 @@ public final class Permissions extends Requester {
         private static final int REQUEST_CODE = generateRequestCode();
 
         public BlockingSync<int[]> result = null;
+
+        @Override
+        public void onDestroy() {
+            result.setIfIsNotSet(EMPTY);
+            super.onDestroy();
+        }
 
         @Override
         public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -44,12 +52,12 @@ public final class Permissions extends Requester {
         });
     }
 
-    protected static final Object requestBlockingLock = new Object();
+    private static final Object requestBlockingLock = new Object();
 
     @NonNull
     public static int[] requestBlocking(@NonNull final Context ctx, @NonNull final String[] perms)
             throws InterruptedException {
-        if (perms.length == 0) return new int[0];
+        if (perms.length == 0) return EMPTY;
         synchronized (requestBlockingLock) {
             final BlockingSync<int[]> r = new BlockingSync<>();
             request(r, ctx, perms);

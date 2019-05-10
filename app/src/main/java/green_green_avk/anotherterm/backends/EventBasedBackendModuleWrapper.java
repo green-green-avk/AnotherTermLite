@@ -116,7 +116,6 @@ public final class EventBasedBackendModuleWrapper {
                 super.close();
             }
 
-            // TODO: get rid of copying: use nio buffers and wait
             @Override
             public void write(final int b) {
                 synchronized (readLock) {
