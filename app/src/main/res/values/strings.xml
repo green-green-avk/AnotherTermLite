@@ -77,8 +77,8 @@
         <b>`/system/bin/sh -l -c &lt;command&gt;\'</b> otherwise.
         <p>Commands:
         <ul>
-        <li><clipboard>$LIB_DIR/libtermsh.so</clipboard> &#x2014; a tool to use Android functionality from
-        the shell.
+        <li><clipboard>$LIB_DIR/libtermsh.so</clipboard> &#x2014; a tool to use Android
+        functionality from the shell.
         Use `help\' argument for <a href="infores:termsh_man">details</a>.</li>
         </ul></p>
         <p>Environment variables:
