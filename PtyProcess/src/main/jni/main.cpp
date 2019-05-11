@@ -253,10 +253,7 @@ static jboolean JNICALL m_pollForRead(JNIEnv *const env, const jobject jthis,
         }
         return JNI_TRUE;
     }
-    if (pfds[1].revents != 0 || pfds[0].revents != POLLIN) {
-        return JNI_TRUE;
-    }
-    return JNI_FALSE;
+    return (pfds[0].revents & POLLIN) ? JNI_FALSE : JNI_TRUE;
 }
 
 static jlong JNICALL m_getArgMax(JNIEnv *const env, const jobject jthis) {

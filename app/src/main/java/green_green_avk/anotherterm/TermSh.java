@@ -434,7 +434,7 @@ public final class TermSh {
                             final Integer _id = (Integer) opts.get("id");
                             if (opts.containsKey("remove")) {
                                 if (_id == null)
-                                    throw new ParseException("What exactly to remove?");
+                                    throw new ParseException("`id' argument is obligatory");
                                 ui.removeNotification(_id);
                                 break;
                             }
@@ -547,7 +547,7 @@ public final class TermSh {
                                 }
                                 case 0: {
                                     name = "Stream";
-                                    uri = StreamProvider.getUri(shellCmd.stdIn, mime,
+                                    uri = StreamProvider.obtainUri(shellCmd.stdIn, mime,
                                             new StreamProvider.OnResult() {
                                                 @Override
                                                 public void onResult(final Object msg) {
@@ -577,6 +577,7 @@ public final class TermSh {
                             shellCmd.onTerminate = new Runnable() {
                                 @Override
                                 public void run() {
+                                    StreamProvider.releaseUri(uri);
                                     result.set(null);
                                 }
                             };

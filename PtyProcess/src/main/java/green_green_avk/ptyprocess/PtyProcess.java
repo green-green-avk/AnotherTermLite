@@ -186,13 +186,17 @@ public final class PtyProcess extends Process {
         }
 
         private boolean check() throws IOException {
-            return pollForRead(pfd.getFd(), pipe[0].getFd());
+            try {
+                return pollForRead(pfd.getFd(), pipe[0].getFd());
+            } catch (final IllegalStateException e) {
+                throw new IOException(e.getMessage(), e);
+            }
         }
 
         @Override
         public int read() throws IOException {
-            if (check()) return -1;
             try {
+                if (check()) return -1;
                 return super.read();
             } catch (final IOException e) {
                 if (!closed) throw e;

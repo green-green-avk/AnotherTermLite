@@ -75,15 +75,30 @@ public final class StreamProvider extends ContentProvider {
 
     private void removeStream(final int id) {
         synchronized (stateLock) {
-            streams.remove(id);
+            streams.delete(id);
         }
     }
 
-    public static Uri getUri(@NonNull final InputStream inputStream, @NonNull final String mime,
-                             @Nullable final OnResult onResult) {
-        if (instance == null) return null;
+    private static int getId(@NonNull final Uri uri) {
+        final String id = uri.getLastPathSegment();
+        if (id == null) throw new NumberFormatException("null");
+        return Integer.parseInt(id);
+    }
+
+    @NonNull
+    public static Uri obtainUri(@NonNull final InputStream inputStream, @NonNull final String mime,
+                                @Nullable final OnResult onResult) {
+        if (instance == null) throw new IllegalStateException("Stream Provider is not ready");
         final int id = instance.putStream(inputStream, mime, onResult);
         return Uri.parse("content://" + instance.authority + "/stream/" + id);
+    }
+
+    public static void releaseUri(@NonNull final Uri uri) {
+        if (instance == null) throw new IllegalStateException("Stream Provider is not ready");
+        try {
+            instance.removeStream(getId(uri));
+        } catch (final NumberFormatException ignored) {
+        }
     }
 
     @Override
@@ -97,12 +112,6 @@ public final class StreamProvider extends ContentProvider {
         authority = info.authority;
         matcher.addURI(authority, "/stream/*", CODE_STREAM);
         instance = this;
-    }
-
-    private int getId(@NonNull final Uri uri) {
-        final String id = uri.getLastPathSegment();
-        if (id == null) throw new NumberFormatException("null");
-        return Integer.parseInt(id);
     }
 
     @Override
@@ -147,7 +156,8 @@ public final class StreamProvider extends ContentProvider {
                 id = getId(uri);
                 is = getStream(id);
             } catch (final IllegalArgumentException e) {
-                Log.e(this.getClass().getSimpleName(), "Invalid id");
+                if (BuildConfig.DEBUG)
+                    Log.w(this.getClass().getSimpleName(), "Invalid id");
                 return;
             }
             final FileOutputStream os = new FileOutputStream(output.getFileDescriptor());
@@ -156,7 +166,11 @@ public final class StreamProvider extends ContentProvider {
                 while (true) {
                     final int r = is.stream.read(buf);
                     if (r < 0) break;
-                    os.write(buf, 0, r);
+                    try {
+                        os.write(buf, 0, r);
+                    } catch (final IOException ignored) {
+                        return;
+                    }
                 }
             } catch (final IOException ignored) {
             }
