@@ -156,6 +156,9 @@ public final class PtyProcess extends Process {
         }
     };
 
+    // Asynchronous close during read (FileChannel class) seems having some issues
+    // before Lollipop...
+    // So, let eat bees.
     public static final class InterruptableFileInputStream
             extends ParcelFileDescriptor.AutoCloseInputStream {
         private volatile boolean closed = false;

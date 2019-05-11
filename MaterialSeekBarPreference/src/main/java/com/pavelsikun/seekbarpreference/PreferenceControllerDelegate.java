@@ -16,7 +16,7 @@ import android.widget.TextView;
 /**
  * Created by Pavel Sikun on 28.05.16.
  *
- * Changed by Aleksandr Kiselev
+ * Changed by Aleksandr Kiselev.
  */
 
 @SuppressWarnings("WeakerAccess")
