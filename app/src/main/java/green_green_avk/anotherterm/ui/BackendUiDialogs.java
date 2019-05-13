@@ -49,6 +49,19 @@ public final class BackendUiDialogs implements BackendUiInteraction,
 
     private final Object promptLock = new Object();
     private volatile Runnable promptState = null;
+    private WeakReference<Dialog> promptDialog = new WeakReference<>(null);
+
+    @UiThread
+    private void showPrompt(@NonNull final Dialog d) {
+        d.show();
+        promptDialog = new WeakReference<>(d);
+        dialogs.add(d);
+    }
+
+    private boolean isShownPrompt() {
+        final Dialog d = promptDialog.get();
+        return d != null && d.isShowing();
+    }
 
     private final Object msgQueueLock = new Object();
     private final ArrayList<LogMessage> msgQueue = new ArrayList<>();
@@ -84,7 +97,7 @@ public final class BackendUiDialogs implements BackendUiInteraction,
             ctxRef.set(ctx);
             if (ctx != null) {
                 final Runnable ps = promptState;
-                if (ps != null) ctx.runOnUiThread(ps);
+                if (ps != null) ps.run();
                 if (!msgQueue.isEmpty()) showQueuedMessages(ctx);
             } else {
                 for (final Dialog d : dialogs) d.dismiss();
@@ -102,6 +115,7 @@ public final class BackendUiDialogs implements BackendUiInteraction,
                 promptState = new Runnable() {
                     @Override
                     public void run() {
+                        if (isShownPrompt()) return;
                         final Activity ctx = ctxRef.getNoBlock();
                         if (ctx == null) return;
                         final EditText et = new EditText(ctx);
@@ -129,7 +143,7 @@ public final class BackendUiDialogs implements BackendUiInteraction,
                         };
                         et.setInputType(InputType.TYPE_CLASS_TEXT |
                                 InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                        final AlertDialog d = new AlertDialog.Builder(ctx)
+                        final Dialog d = new AlertDialog.Builder(ctx)
                                 .setOnCancelListener(new DialogInterface.OnCancelListener() {
                                     @Override
                                     public void onCancel(DialogInterface dialog) {
@@ -172,8 +186,7 @@ public final class BackendUiDialogs implements BackendUiInteraction,
                         if (w != null)
                             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
                         // ---
-                        d.show();
-                        dialogs.add(d);
+                        showPrompt(d);
                     }
                 };
                 handler.post(promptState);
@@ -192,6 +205,7 @@ public final class BackendUiDialogs implements BackendUiInteraction,
                 promptState = new Runnable() {
                     @Override
                     public void run() {
+                        if (isShownPrompt()) return;
                         final Activity ctx = ctxRef.getNoBlock();
                         if (ctx == null) return;
                         final DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
@@ -220,8 +234,8 @@ public final class BackendUiDialogs implements BackendUiInteraction,
                                 .setMessage(message)
                                 .setNegativeButton(android.R.string.no, listener)
                                 .setPositiveButton(android.R.string.yes, listener)
-                                .show();
-                        dialogs.add(d);
+                                .create();
+                        showPrompt(d);
                     }
                 };
                 handler.post(promptState);
