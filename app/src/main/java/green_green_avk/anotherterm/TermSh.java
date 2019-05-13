@@ -119,15 +119,10 @@ public final class TermSh {
     }
 
     private static final class UiServer implements Runnable {
-        private static final BinaryGetOpts.Options NOTIFY_OPTS =
-                new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
-                        new BinaryGetOpts.Option("id", new String[]{"-i", "--id"},
-                                BinaryGetOpts.Option.Type.INT),
-                        new BinaryGetOpts.Option("remove", new String[]{"-r", "--remove"},
-                                BinaryGetOpts.Option.Type.NONE)
-                });
         private static final BinaryGetOpts.Options COPY_OPTS =
                 new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
+                        new BinaryGetOpts.Option("force", new String[]{"-f", "--force"},
+                                BinaryGetOpts.Option.Type.NONE),
                         new BinaryGetOpts.Option("from-path", new String[]{"-fp", "--from-path"},
                                 BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("from-uri", new String[]{"-fu", "--from-uri"},
@@ -135,29 +130,47 @@ public final class TermSh {
                         new BinaryGetOpts.Option("to-path", new String[]{"-tp", "--to-path"},
                                 BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("to-uri", new String[]{"-tu", "--to-uri"},
-                                BinaryGetOpts.Option.Type.STRING),
-                        new BinaryGetOpts.Option("force", new String[]{"-f", "--force"},
-                                BinaryGetOpts.Option.Type.NONE)
+                                BinaryGetOpts.Option.Type.STRING)
                 });
-        private static final BinaryGetOpts.Options PICK_OPTS =
+        private static final BinaryGetOpts.Options NOTIFY_OPTS =
                 new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
-                        new BinaryGetOpts.Option("notify", new String[]{"-n", "--notify"},
-                                BinaryGetOpts.Option.Type.NONE),
-                        new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
-                                BinaryGetOpts.Option.Type.STRING),
-                        new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
-                                BinaryGetOpts.Option.Type.STRING),
-                        new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
-                                BinaryGetOpts.Option.Type.NONE),
-                        new BinaryGetOpts.Option("force", new String[]{"-f", "--force"},
+                        new BinaryGetOpts.Option("id", new String[]{"-i", "--id"},
+                                BinaryGetOpts.Option.Type.INT),
+                        new BinaryGetOpts.Option("remove", new String[]{"-r", "--remove"},
                                 BinaryGetOpts.Option.Type.NONE)
                 });
         private static final BinaryGetOpts.Options OPEN_OPTS =
                 new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
+                        new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
+                                BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("notify", new String[]{"-n", "--notify"},
+                                BinaryGetOpts.Option.Type.NONE),
+                        new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
+                                BinaryGetOpts.Option.Type.NONE)
+                });
+        private static final BinaryGetOpts.Options PICK_OPTS =
+                new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
+                        new BinaryGetOpts.Option("force", new String[]{"-f", "--force"},
                                 BinaryGetOpts.Option.Type.NONE),
                         new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
                                 BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("notify", new String[]{"-n", "--notify"},
+                                BinaryGetOpts.Option.Type.NONE),
+                        new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
+                                BinaryGetOpts.Option.Type.NONE)
+                });
+        private static final BinaryGetOpts.Options SEND_OPTS =
+                new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
+                        new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("notify", new String[]{"-n", "--notify"},
+                                BinaryGetOpts.Option.Type.NONE),
+                        new BinaryGetOpts.Option("size", new String[]{"-s", "--size"},
+                                BinaryGetOpts.Option.Type.INT),
                         new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
                                 BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
@@ -518,7 +531,7 @@ public final class TermSh {
                         case "send": {
                             final BinaryGetOpts.Parser ap = new BinaryGetOpts.Parser(shellCmd.args);
                             ap.skip();
-                            final Map<String, ?> opts = ap.parse(OPEN_OPTS);
+                            final Map<String, ?> opts = ap.parse(SEND_OPTS);
                             String mime = (String) opts.get("mime");
                             if (mime == null) mime = "*/*";
                             String title = (String) opts.get("title");
@@ -548,6 +561,7 @@ public final class TermSh {
                                 case 0: {
                                     name = "Stream";
                                     uri = StreamProvider.obtainUri(shellCmd.stdIn, mime,
+                                            null, (Integer) opts.get("size"),
                                             new StreamProvider.OnResult() {
                                                 @Override
                                                 public void onResult(final Object msg) {
@@ -671,7 +685,10 @@ public final class TermSh {
                                         filename = C.UNNAMED_FILE_NAME;
                                         exitStatus = 2;
                                     }
-                                    output = new FileOutputStream(new File(outputFile, filename));
+                                    final File of = new File(outputFile, filename);
+                                    if (!opts.containsKey("force") && of.isFile())
+                                        throw new ParseException("File already exists");
+                                    output = new FileOutputStream(of);
                                 } else {
                                     output = new FileOutputStream(outputFile);
                                 }

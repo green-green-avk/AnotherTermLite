@@ -36,14 +36,16 @@ public final class MouseButtonsWorkAround {
     }
 
     // We can't assign actionButton: Google is against it yet...
-    protected static MotionEvent obtainEvent(float x, float y, int action,
-                                             int buttons, int actionButton, int vScroll,
-                                             int source, int toolType) {
+    @NonNull
+    protected static MotionEvent obtainEvent(final float x, final float y, final int action,
+                                             final int buttons, final int actionButton,
+                                             final int vScroll,
+                                             final int source, final int toolType) {
         final long ts = SystemClock.uptimeMillis();
-        final MotionEvent.PointerProperties pp[] = {new MotionEvent.PointerProperties()};
+        final MotionEvent.PointerProperties[] pp = {new MotionEvent.PointerProperties()};
         pp[0].id = 0;
         pp[0].toolType = toolType;
-        final MotionEvent.PointerCoords pc[] = {new MotionEvent.PointerCoords()};
+        final MotionEvent.PointerCoords[] pc = {new MotionEvent.PointerCoords()};
         pc[0].x = x;
         pc[0].y = y;
         pc[0].pressure = 1.0f;
@@ -53,7 +55,7 @@ public final class MouseButtonsWorkAround {
                 1.0f, 1.0f, 0, 0, source, 0);
     }
 
-    private boolean fixEvent(@NonNull final MotionEvent event, int action) {
+    private boolean fixEvent(@NonNull final MotionEvent event, final int action) {
         mXY.x = event.getX();
         mXY.y = event.getY();
         mButtons = event.getButtonState();
@@ -62,7 +64,7 @@ public final class MouseButtonsWorkAround {
         return fixEvent((InputEvent) event, action);
     }
 
-    private boolean fixEvent(@NonNull final InputEvent event, int action) {
+    private boolean fixEvent(@NonNull final InputEvent event, final int action) {
         fixedEvent = obtainEvent(mXY.x, mXY.y, action,
                 mButtons | mInjectedButtons, 0, 0,
                 event.getSource(), mToolType);

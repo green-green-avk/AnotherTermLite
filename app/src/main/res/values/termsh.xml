@@ -6,7 +6,7 @@
 
     $TERMSH [-r|--raw] <command> [<arg>]...
 
-      -r|--raw - raw mode as set by cfmakeraw().
+      -r|--raw - raw mode as set by cfmakeraw() libc function.
         (Beware, Ctrl-C etc. are not captured by the terminal in this mode.)
 
 
@@ -35,9 +35,13 @@
         -u|--uri - use URI instead of file
 
 
-    * send [-n|--notify] [-m|--meta <meta>] [-t|--title <title>] [-u|--uri] [--] [<file|URI>]
+    * send [-n|--notify] [-m|--meta <meta>] [-s|--size <size>] [-t|--title <title>] [-u|--uri] [--] [<file|URI>]
 
-        Send (android.intent.action.SEND). If no `file\' argument is specified, stdin is used.
+        Send (android.intent.action.SEND). If no <file|URI> is specified, stdin is used.
+
+        -s|--size <size> - size in bytes to provide in the query answer if input is a stream.
+                           GMail client, for example, treats absence of the size
+                           as zero size even in case of a stream.
 
         -u|--uri - use URI instead of file
 

@@ -34,6 +34,7 @@ public final class ConsoleInput implements BytesSink {
     private final ConsoleScreenBuffer mainScrBuf;
     private final ConsoleScreenBuffer altScrBuf;
     private final ConsoleScreenCharAttrs mCurrAttrs = new ConsoleScreenCharAttrs();
+    private int numBellEvents = 0;
     private final BinderInputStream mInputBuf = new BinderInputStream(1024);
     private InputStreamReader mStrConv;
     private final InputTokenizer mInputTokenizer = new InputTokenizer();
@@ -96,6 +97,12 @@ public final class ConsoleInput implements BytesSink {
         return currScrBuf == altScrBuf;
     }
 
+    public int getBell() {
+        final int r = numBellEvents;
+        numBellEvents = 0;
+        return r;
+    }
+
     private void cr() {
         currScrBuf.setPosX(0);
     }
@@ -128,7 +135,8 @@ public final class ConsoleInput implements BytesSink {
         }
         // Standard Java and Android libraries does not have a proper algorithm for it...
         // As long as Apache Commons...
-        // TODO: TreeList with random access by order index should be implemented.
+        // TODO: TreeList with random access by ordered position should be implemented.
+        // I.e., the same tree with two descending criteria.
         if (v < tt.size()) {
             final Iterator<Integer> i = tt.iterator();
             while (v > 0) {
@@ -171,7 +179,7 @@ public final class ConsoleInput implements BytesSink {
 //                    Log.v("CtrlSeq/Note", t.type + ": " + t.value.toString());
                     switch (t.type) {
                         case OSC: {
-                            EscOsc osc = new EscOsc(t.value);
+                            final EscOsc osc = new EscOsc(t.value);
                             if (osc.args.length == 2) {
                                 switch (osc.getIntArg(0, -1)) {
                                     case 0:
@@ -240,7 +248,7 @@ public final class ConsoleInput implements BytesSink {
                                     bs();
                                     break;
                                 case '\u0007':
-                                    // TODO: Bell
+                                    ++numBellEvents;
                                     break;
                                 default:
                                     if (LOG_UNKNOWN_ESC)

@@ -27,7 +27,7 @@ public final class SettingsActivity extends AppCompatPreferenceActivity {
         // Native configuration dependent resource fetching does not works for xml:
         // xml-v23 subfolder is pretty useless...
         if (Build.VERSION.SDK_INT >= 23)
-            loadHeadersFromResource(R.xml.perf_headers_v23, target);
+            loadHeadersFromResource(R.xml.pref_headers_v23, target);
         else
             loadHeadersFromResource(R.xml.pref_headers, target);
     }

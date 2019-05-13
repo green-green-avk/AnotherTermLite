@@ -29,22 +29,25 @@ public class ScreenMouseView extends ScrollableView {
     protected Dialog overlay = null;
     protected ViewGroup overlayButtons = null;
 
-    public ScreenMouseView(Context context, AttributeSet attrs) {
+    public ScreenMouseView(final Context context, final AttributeSet attrs) {
         super(context, attrs);
         init(context, attrs, R.attr.screenMouseViewStyle, R.style.AppScreenMouseViewStyle);
     }
 
-    public ScreenMouseView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public ScreenMouseView(final Context context, final AttributeSet attrs,
+                           final int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init(context, attrs, defStyleAttr, R.style.AppScreenMouseViewStyle);
     }
 
-    public ScreenMouseView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public ScreenMouseView(final Context context, final AttributeSet attrs,
+                           final int defStyleAttr, final int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
         init(context, attrs, defStyleAttr, defStyleRes);
     }
 
-    protected void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    protected void init(final Context context, final AttributeSet attrs,
+                        final int defStyleAttr, final int defStyleRes) {
         final TypedArray a = context.obtainStyledAttributes(
                 attrs, R.styleable.ScreenMouseView, defStyleAttr, defStyleRes);
         try {
@@ -91,7 +94,7 @@ public class ScreenMouseView extends ScrollableView {
     }
 
     @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+    protected void onSizeChanged(final int w, final int h, final int oldw, final int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         scrollPosition.x = w / 2;
         scrollPosition.y = h / 2;
@@ -113,7 +116,7 @@ public class ScreenMouseView extends ScrollableView {
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    protected void onDraw(final Canvas canvas) {
         canvas.save();
         final int sx = cursorSize;
         final int sy = cursorSize;
@@ -127,7 +130,8 @@ public class ScreenMouseView extends ScrollableView {
     }
 
     @Override
-    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+    public boolean onScroll(final MotionEvent e1, final MotionEvent e2,
+                            final float distanceX, final float distanceY) {
         final boolean r = super.onScroll(e1, e2, distanceX, distanceY);
         dispatchEventToSibling((int) scrollPosition.x, (int) scrollPosition.y,
                 mOverlayButtons != 0 ? MotionEvent.ACTION_MOVE : MotionEvent.ACTION_HOVER_MOVE,
@@ -146,7 +150,7 @@ public class ScreenMouseView extends ScrollableView {
             }
         }
     */
-    protected void setOverlayCoords(MotionEvent event) {
+    protected void setOverlayCoords(final MotionEvent event) {
         int width = overlayButtons.getLayoutParams().width;
         int height = overlayButtons.getLayoutParams().height;
         if (width <= 0) width = overlayButtons.getWidth();
@@ -156,7 +160,7 @@ public class ScreenMouseView extends ScrollableView {
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
+    public boolean onTouchEvent(final MotionEvent event) {
         if (event.getToolType(0) != MotionEvent.TOOL_TYPE_FINGER) return false;
         final int action = event.getActionMasked();
         switch (action) {
@@ -274,7 +278,8 @@ public class ScreenMouseView extends ScrollableView {
         return true;
     }
 
-    protected void dispatchEventToSibling(int x, int y, int action, int buttons, int button, int vScroll) {
+    protected void dispatchEventToSibling(int x, int y, final int action,
+                                          final int buttons, final int button, final int vScroll) {
         x += getLeft();
         y += getTop();
         final View v = getTargetView(x, y);
@@ -297,14 +302,16 @@ public class ScreenMouseView extends ScrollableView {
         event.recycle();
     }
 
-    protected static MotionEvent obtainEvent(float x, float y, int action, int buttons, int actionButton, int vScroll) {
+    protected static MotionEvent obtainEvent(final float x, final float y, final int action,
+                                             final int buttons, final int actionButton,
+                                             final int vScroll) {
         // ActionButton can be set only by means of hack using reflection; I prefer to avoid it.
         // TODO: or not to do?.. Hack...
         final long ts = SystemClock.uptimeMillis();
-        final MotionEvent.PointerProperties pp[] = {new MotionEvent.PointerProperties()};
+        final MotionEvent.PointerProperties[] pp = {new MotionEvent.PointerProperties()};
         pp[0].id = 0;
         pp[0].toolType = MotionEvent.TOOL_TYPE_MOUSE;
-        final MotionEvent.PointerCoords pc[] = {new MotionEvent.PointerCoords()};
+        final MotionEvent.PointerCoords[] pc = {new MotionEvent.PointerCoords()};
         pc[0].x = x;
         pc[0].y = y;
         pc[0].pressure = 1.0f;
@@ -315,7 +322,7 @@ public class ScreenMouseView extends ScrollableView {
     }
 
     @Nullable
-    protected View getTargetView(int x, int y) {
+    protected View getTargetView(final int x, final int y) {
         final ViewGroup parent = (ViewGroup) getParent();
         final Rect b = new Rect();
         for (int i = 0; i < parent.getChildCount(); ++i) {

@@ -19,6 +19,9 @@ import android.view.MotionEvent;
 import android.view.SubMenu;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.nio.charset.Charset;
@@ -36,7 +39,9 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
     private Session mSession = null;
     private ConsoleScreenView mCsv = null;
     private ConsoleKeyboardView mCkv = null;
-    private ScreenMouseView mVmv = null;
+    private ScreenMouseView mSmv = null;
+    private ImageView mBell = null;
+    private Animation mBellAnim = null;
     private ColorStateList toolbarIconColor = null;
 
     private int getFirstSessionKey() {
@@ -86,7 +91,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
     */
 
     @Override
-    public void onMultiWindowModeChanged(boolean isInMultiWindowMode) {
+    public void onMultiWindowModeChanged(final boolean isInMultiWindowMode) {
         super.onMultiWindowModeChanged(isInMultiWindowMode);
         getWindow().setFlags(isInMultiWindowMode ? 0 : WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -113,7 +118,9 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
 
         mCsv = findViewById(R.id.screen);
         mCkv = findViewById(R.id.keyboard);
-        mVmv = findViewById(R.id.mouse);
+        mSmv = findViewById(R.id.mouse);
+        mBell = findViewById(R.id.bell);
+        mBellAnim = AnimationUtils.loadAnimation(this, R.anim.blink_ring);
 
         mCsv.setFont(FontsManager.consoleTypefaces);
         mCkv.setFont(FontsManager.consoleTypefaces); // Old Android devices have no glyphs for some special symbols
@@ -265,6 +272,10 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
                 if (mi.isVisible() != ms)
                     mi.setVisible(ms);
             }
+            if (mSession.input.getBell() != 0) {
+                if (!mBellAnim.hasStarted() || mBellAnim.hasEnded())
+                    mBell.startAnimation(mBellAnim);
+            }
         }
     }
 
@@ -275,7 +286,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
             final MenuItem mi = mMenu.findItem(R.id.action_mouse);
             UiUtils.setMenuItemIconState(mi, new int[]{}, toolbarIconColor);
             mi.setChecked(false);
-            mVmv.setVisibility(View.GONE);
+            mSmv.setVisibility(View.GONE);
         }
     }
 
@@ -299,11 +310,11 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
                     turnOffSelectionMode();
                     UiUtils.setMenuItemIconState(item, new int[]{android.R.attr.state_checked}, toolbarIconColor);
                     item.setChecked(true);
-                    mVmv.setVisibility(View.VISIBLE);
+                    mSmv.setVisibility(View.VISIBLE);
                 } else {
                     UiUtils.setMenuItemIconState(item, new int[]{}, toolbarIconColor);
                     item.setChecked(false);
-                    mVmv.setVisibility(View.GONE);
+                    mSmv.setVisibility(View.GONE);
                 }
                 return true;
             }
