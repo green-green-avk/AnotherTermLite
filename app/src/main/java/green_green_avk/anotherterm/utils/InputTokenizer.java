@@ -144,9 +144,12 @@ public final class InputTokenizer implements Iterator<InputTokenizer.Token>, Ite
     public void tokenize(@NonNull final Readable v) throws IOException {
         mBuf.position(mPos);
         mBuf.compact();
-        v.read(mBuf);
-        mBuf.flip();
-        mPos = 0;
-        mGotNext = false;
+        try {
+            v.read(mBuf);
+        } finally {
+            mBuf.flip();
+            mPos = 0;
+            mGotNext = false;
+        }
     }
 }
