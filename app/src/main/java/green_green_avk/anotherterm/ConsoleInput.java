@@ -20,6 +20,7 @@ import java.util.WeakHashMap;
 import green_green_avk.anotherterm.backends.EventBasedBackendModuleWrapper;
 import green_green_avk.anotherterm.utils.BinderInputStream;
 import green_green_avk.anotherterm.utils.BytesSink;
+import green_green_avk.anotherterm.utils.DecTerminalCharsets;
 import green_green_avk.anotherterm.utils.EscCsi;
 import green_green_avk.anotherterm.utils.EscOsc;
 import green_green_avk.anotherterm.utils.InputTokenizer;
@@ -43,6 +44,12 @@ public final class ConsoleInput implements BytesSink {
     public boolean cursorVisibility = true; // DECTECM
     public int defaultTabLength = 8;
     public final TreeSet<Integer> tabPositions = new TreeSet<>();
+    public final char[][] decGxCharsets = new char[][]{null, null, null, null};
+    public int decGlCharset = 0;
+
+    private final ConsoleScreenCharAttrs mSavedCurrAttrs = new ConsoleScreenCharAttrs();
+    private final char[][] mSavedDecGxCharsets = new char[][]{null, null, null, null};
+    private int mSavedDecGlCharset = 0;
 
     private void sendBack(final String v) {
         if (consoleOutput != null)
@@ -50,7 +57,7 @@ public final class ConsoleInput implements BytesSink {
     }
 
     public ConsoleInput() {
-        mainScrBuf = new ConsoleScreenBuffer(80, 24, 1000);
+        mainScrBuf = new ConsoleScreenBuffer(80, 24, 10000);
         altScrBuf = new ConsoleScreenBuffer(80, 24, 24);
         currScrBuf = mainScrBuf;
         setCharset(Charset.defaultCharset());
@@ -103,17 +110,27 @@ public final class ConsoleInput implements BytesSink {
         return r;
     }
 
+    private int zao(final int v) {
+        return v < 1 ? 1 : v;
+    }
+
     private void cr() {
         currScrBuf.setPosX(0);
     }
 
     private void lf() {
+        currScrBuf.setCurrentAttrs(mCurrAttrs);
+        currScrBuf.moveScrollPosY(1);
+    }
+
+    private void ind() {
+        currScrBuf.setCurrentAttrs(mCurrAttrs);
         currScrBuf.moveScrollPosY(1);
     }
 
     private void ri() {
         currScrBuf.setCurrentAttrs(mCurrAttrs);
-        currScrBuf.scroll(-1);
+        currScrBuf.moveScrollPosY(-1);
     }
 
     private void bs() {
@@ -168,6 +185,35 @@ public final class ConsoleInput implements BytesSink {
         tabPositions.add(pos);
     }
 
+    private void setDecCharset(final int i, final char c) {
+        switch (c) {
+            case '0':
+                decGxCharsets[i] = DecTerminalCharsets.graphics;
+                break;
+            case 'A':
+                decGxCharsets[i] = DecTerminalCharsets.UK;
+                break;
+            default:
+                decGxCharsets[i] = null;
+        }
+    }
+
+    private void saveCursor() {
+        currScrBuf.savePos();
+        mSavedCurrAttrs.set(mCurrAttrs);
+        mSavedDecGlCharset = decGlCharset;
+        System.arraycopy(decGxCharsets, 0, mSavedDecGxCharsets, 0,
+                decGxCharsets.length);
+    }
+
+    private void restoreCursor() {
+        System.arraycopy(mSavedDecGxCharsets, 0, decGxCharsets, 0,
+                decGxCharsets.length);
+        decGlCharset = mSavedDecGlCharset;
+        mCurrAttrs.set(mSavedCurrAttrs);
+        currScrBuf.restorePos();
+    }
+
     @Override
     public void feed(@NonNull final ByteBuffer v) {
         if (v.remaining() == 0) return;
@@ -198,6 +244,13 @@ public final class ConsoleInput implements BytesSink {
                             break;
                         case ESC:
                             switch (t.value.charAt(1)) {
+                                case 'D': // IND
+                                    ind();
+                                    break;
+                                case 'E': // NEL
+                                    ind();
+                                    cr();
+                                    break;
                                 case 'H': // HTS
                                     tabSet(currScrBuf.getPosX());
                                     break;
@@ -208,10 +261,10 @@ public final class ConsoleInput implements BytesSink {
                                     reset();
                                     break;
                                 case '7':
-                                    currScrBuf.savePos();
+                                    saveCursor();
                                     break;
                                 case '8':
-                                    currScrBuf.restorePos();
+                                    restoreCursor();
                                     break;
                                 case '>':
                                     if (consoleOutput != null)
@@ -222,8 +275,30 @@ public final class ConsoleInput implements BytesSink {
                                         consoleOutput.appNumKeys = true;
                                     break;
                                 case '(':
+                                    setDecCharset(0, t.value.charAt(2));
+                                    break;
                                 case ')':
-                                    mCurrAttrs.reset();
+                                    setDecCharset(1, t.value.charAt(2));
+                                    break;
+                                case '*':
+                                    setDecCharset(2, t.value.charAt(2));
+                                    break;
+                                case '+':
+                                    setDecCharset(3, t.value.charAt(2));
+                                    break;
+                                case 'n':
+                                    decGlCharset = 2;
+                                    break;
+                                case 'o':
+                                    decGlCharset = 3;
+                                    break;
+                                case '#':
+                                    switch (t.value.charAt(2)) {
+                                        case '8':
+                                            currScrBuf.setCurrentAttrs(mCurrAttrs);
+                                            currScrBuf.fillAll('E');
+                                            break;
+                                    }
                                     break;
                                 default:
                                     if (LOG_UNKNOWN_ESC)
@@ -250,6 +325,12 @@ public final class ConsoleInput implements BytesSink {
                                 case '\u0007':
                                     ++numBellEvents;
                                     break;
+                                case '\u000E':
+                                    decGlCharset = 1;
+                                    break;
+                                case '\u000F':
+                                    decGlCharset = 0;
+                                    break;
                                 default:
                                     if (LOG_UNKNOWN_ESC)
                                         Log.w("CtrlSeq", "CTL: " + (int) t.value.charAt(0));
@@ -258,7 +339,8 @@ public final class ConsoleInput implements BytesSink {
                         case TEXT:
                             currScrBuf.setCurrentAttrs(mCurrAttrs);
                             if (insertMode) currScrBuf.insertChars(t.value.length());
-                            currScrBuf.setChars(t.value);
+                            currScrBuf.setChars(DecTerminalCharsets.translate(t.value,
+                                    decGxCharsets[decGlCharset]));
                             break;
                     }
                 }
@@ -291,27 +373,33 @@ public final class ConsoleInput implements BytesSink {
                         }
                         break;
                     case 'A':
-                        currScrBuf.movePosY(-csi.getIntArg(0, 1));
+                        currScrBuf.movePosY(-zao(csi.getIntArg(0, 1)));
                         return;
                     case 'B':
-                        currScrBuf.movePosY(csi.getIntArg(0, 1));
+                    case 'e':
+                        currScrBuf.movePosY(zao(csi.getIntArg(0, 1)));
                         return;
                     case 'C':
-                        currScrBuf.movePosX(csi.getIntArg(0, 1));
+                    case 'a':
+                        currScrBuf.movePosX(zao(csi.getIntArg(0, 1)));
                         return;
                     case 'D':
-                        currScrBuf.movePosX(-csi.getIntArg(0, 1));
+                        currScrBuf.movePosX(-zao(csi.getIntArg(0, 1)));
                         return;
                     case 'E':
-                        currScrBuf.movePosY(csi.getIntArg(0, 1));
+                        currScrBuf.movePosY(zao(csi.getIntArg(0, 1)));
                         cr();
                         return;
                     case 'F':
-                        currScrBuf.movePosY(-csi.getIntArg(0, 1));
+                        currScrBuf.movePosY(-zao(csi.getIntArg(0, 1)));
                         cr();
                         return;
                     case 'G':
+                    case '`':
                         currScrBuf.setPosX(csi.getIntArg(0, 1) - 1);
+                        return;
+                    case 'd':
+                        currScrBuf.setPosY(csi.getIntArg(0, 1) - 1);
                         return;
                     case 'H':
                     case 'f':
@@ -321,6 +409,10 @@ public final class ConsoleInput implements BytesSink {
                     case 'I': // CHT
                         tab(csi.getIntArg(0, 1));
                         return;
+                    case 'X': {
+                        currScrBuf.eraseChars(zao(csi.getIntArg(0, 1)));
+                        return;
+                    }
                     case 'Z': // CBT
                         tab(-csi.getIntArg(0, 1));
                         return;
@@ -364,17 +456,17 @@ public final class ConsoleInput implements BytesSink {
                         break;
                     case 'm': {
                         int i = 0;
-                        ConsoleScreenCharAttrs aa = mCurrAttrs;
+                        final ConsoleScreenCharAttrs aa = mCurrAttrs;
                         if (csi.args.length == 0) {
                             aa.reset();
                             return;
                         }
                         while (i < csi.args.length) {
-                            final int a;
+                            int a;
                             try {
                                 a = Integer.parseInt(csi.args[i++]);
-                            } catch (NumberFormatException e) {
-                                continue;
+                            } catch (final NumberFormatException e) {
+                                a = 0;
                             }
                             switch (a) {
                                 case 0:
@@ -444,11 +536,11 @@ public final class ConsoleInput implements BytesSink {
                     }
                     case 'L':
                         currScrBuf.setCurrentAttrs(mCurrAttrs);
-                        currScrBuf.scrollRegion(-csi.getIntArg(0, 1));
+                        currScrBuf.insertLine(csi.getIntArg(0, 1));
                         return;
                     case 'M':
                         currScrBuf.setCurrentAttrs(mCurrAttrs);
-                        currScrBuf.scrollRegion(csi.getIntArg(0, 1));
+                        currScrBuf.deleteLine(csi.getIntArg(0, 1));
                         return;
                     case '@':
                         currScrBuf.setCurrentAttrs(mCurrAttrs);
@@ -469,15 +561,17 @@ public final class ConsoleInput implements BytesSink {
                         break;
                     }
                     case 'r':
+                        if (csi.args.length == 2)
+                            currScrBuf.setTBMargins(csi.getIntArg(0, 1) - 1,
+                                    csi.getIntArg(1, currScrBuf.getHeight()) - 1);
+                        else currScrBuf.resetMargins();
                         currScrBuf.setPos(0, 0);
-                        currScrBuf.setScrollRegion(csi.getIntArg(0, 1) - 1,
-                                csi.getIntArg(1, currScrBuf.getHeight()) - 1);
                         return;
                     case 's':
-                        currScrBuf.savePos();
+                        saveCursor();
                         return;
                     case 'u':
-                        currScrBuf.restorePos();
+                        restoreCursor();
                         return;
                     default:
                 }
@@ -519,6 +613,18 @@ public final class ConsoleInput implements BytesSink {
                 case 1:
                     if (consoleOutput != null)
                         consoleOutput.appCursorKeys = value;
+                    return;
+                case 3: // DECCOLM
+                    resize(value ? 132 : 80, currScrBuf.getHeight());
+                    currScrBuf.eraseAll();
+                    currScrBuf.setAbsPos(0, 0);
+                    return;
+                case 5:
+                    currScrBuf.inverseScreen = value; // DECSCNM
+                    return;
+                case 6: // DECOM
+                    currScrBuf.originMode = value;
+                    currScrBuf.setPos(0, 0);
                     return;
                 case 7:
                     mainScrBuf.wrap = value;
@@ -576,22 +682,22 @@ public final class ConsoleInput implements BytesSink {
                     return;
                 case 1048:
                     if (value) {
-                        currScrBuf.savePos();
+                        saveCursor();
                     } else {
-                        currScrBuf.restorePos();
+                        restoreCursor();
                     }
                     currScrBuf.getCurrentAttrs(mCurrAttrs);
                     return;
                 case 1049:
                     if (value) {
-                        currScrBuf.savePos();
+                        saveCursor();
                         altScrBuf.setPos(currScrBuf);
                         currScrBuf = altScrBuf;
                         currScrBuf.clear();
                     } else {
                         mainScrBuf.setPos(currScrBuf);
                         currScrBuf = mainScrBuf;
-                        currScrBuf.restorePos();
+                        restoreCursor();
                     }
                     currScrBuf.getCurrentAttrs(mCurrAttrs);
                     return;

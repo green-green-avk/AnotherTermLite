@@ -6,13 +6,9 @@ import java.io.IOException;
 import java.nio.CharBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public final class InputTokenizer implements Iterator<InputTokenizer.Token>, Iterable<InputTokenizer.Token> {
     private static final int SEQ_MAXLEN = 256;
-    private static final Pattern CSI_END_PAT = Pattern.compile("[@A-Z\\\\^_`a-z{|}~]");
-    private static final Pattern OSC_END_PAT = Pattern.compile("\\a|\\e\\\\");
 
     public static final class Token {
         public enum Type {
@@ -28,39 +24,72 @@ public final class InputTokenizer implements Iterator<InputTokenizer.Token>, Ite
     private final CharBuffer mBuf = (CharBuffer) CharBuffer.allocate(8192).flip();
     private final char[] mBufArr = mBuf.array();
     private int mPos = 0;
+    private int mEnd = 0;
     private CharBuffer mToken = null;
     private Token.Type mType = Token.Type.TEXT;
     private Boolean mGotNext = false;
 
-    private void getSequence(int pos, @NonNull final Pattern pat) {
-        final Matcher m = pat.matcher(mBuf);
-        m.region(pos, mBuf.limit());
-        if (!m.find()) {
-            if ((mBuf.limit() - pos) > SEQ_MAXLEN) {
-                mType = Token.Type.TEXT;
-                mToken = mBuf.subSequence(mPos, pos);
-                mPos = pos;
-                return;
-            }
-            mToken = null;
-            return;
-        }
-        pos = m.end();
+    private void found(int pos) {
+        ++pos;
         mToken = mBuf.subSequence(mPos, pos);
         mPos = pos;
     }
 
+    private void notFound(final int pos) {
+        if ((pos - mPos) > SEQ_MAXLEN) {
+            mType = Token.Type.TEXT;
+            mToken = mBuf.subSequence(mPos, pos);
+            mPos = pos;
+            return;
+        }
+        mToken = null;
+    }
+
+    private void getOsc(int pos) {
+        for (; pos < mEnd; ++pos) {
+            switch (mBufArr[pos]) {
+                case 27:
+                    if (pos + 1 >= mEnd || mBufArr[pos + 1] != '\\') break;
+                    ++pos;
+                case 7:
+                    found(pos);
+                    return;
+            }
+        }
+        notFound(pos);
+    }
+
+    private void getCsi(int pos) {
+        for (; pos < mEnd; ++pos) {
+            if (mBufArr[pos] >= 0x40 && mBufArr[pos] <= 0x7E) {
+                found(pos);
+                return;
+            }
+        }
+        notFound(pos);
+    }
+
+    private void getEsc(int pos) {
+        for (; pos < mEnd; ++pos) {
+            if (mBufArr[pos] < 32 || mBufArr[pos] >= 48) {
+                found(pos);
+                return;
+            }
+        }
+        notFound(pos);
+    }
+
     private void getNext() {
-        if (mBuf.limit() <= mPos) {
+        if (mEnd <= mPos) {
             mToken = null;
             return;
         }
         int pos = mPos;
-        for (; mBufArr[pos] > 0x1F && mBufArr[pos] != 0x7F; ++pos) {
-            if (pos >= mBuf.limit()) {
+        while (mBufArr[pos] > 0x1F && mBufArr[pos] != 0x7F) {
+            if (++pos >= mEnd) {
                 mType = Token.Type.TEXT;
-                mToken = mBuf.subSequence(mPos, mBuf.limit());
-                mPos = mBuf.limit();
+                mToken = mBuf.subSequence(mPos, mEnd);
+                mPos = mEnd;
                 return;
             }
         }
@@ -78,41 +107,21 @@ public final class InputTokenizer implements Iterator<InputTokenizer.Token>, Ite
         }
         mType = Token.Type.ESC;
         ++pos;
-        if (mBuf.limit() <= pos) {
+        if (mEnd <= pos) {
             mToken = null;
             return;
         }
         switch (mBufArr[pos]) {
             case '[':
                 mType = Token.Type.CSI;
-                getSequence(pos + 1, CSI_END_PAT);
+                getCsi(pos + 1);
                 return;
             case ']':
                 mType = Token.Type.OSC;
-                getSequence(pos + 1, OSC_END_PAT);
-                return;
-            case ' ':
-            case '#':
-            case '%':
-            case '(':
-            case ')':
-            case '*':
-            case '+':
-            case '-':
-            case '.':
-            case '/':
-                pos += 2;
-                if (mBuf.limit() < pos) {
-                    mToken = null;
-                    return;
-                }
-                mToken = mBuf.subSequence(mPos, pos);
-                mPos = pos;
+                getOsc(pos + 1);
                 return;
             default:
-                ++pos;
-                mToken = mBuf.subSequence(mPos, pos);
-                mPos = pos;
+                getEsc(pos);
                 return;
         }
     }
@@ -149,6 +158,7 @@ public final class InputTokenizer implements Iterator<InputTokenizer.Token>, Ite
         } finally {
             mBuf.flip();
             mPos = 0;
+            mEnd = mBuf.limit();
             mGotNext = false;
         }
     }

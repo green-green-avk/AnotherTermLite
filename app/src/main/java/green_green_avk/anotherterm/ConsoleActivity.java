@@ -1,8 +1,11 @@
 package green_green_avk.anotherterm;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Rect;
@@ -18,9 +21,11 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.SubMenu;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -135,12 +140,12 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
                 if (ConsoleService.sessionKeys.size() < 2) return true;
                 if (e1 == null || e2 == null) return true; // avoid null events bug
                 if (Math.abs(e1.getX() - e2.getX()) > 100) {
-                    if (velocityX < -200) {
+                    if (velocityX < -500) {
                         startSelf(getNextSessionKey(mSessionKey));
                         overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_left);
                         return true;
                     }
-                    if (velocityX > 200) {
+                    if (velocityX > 500) {
                         startSelf(getPreviousSessionKey(mSessionKey));
                         overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_right);
                         return true;
@@ -257,20 +262,28 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
         }
         if (mSession != null) chi.setTitle(mSession.output.getCharset().name());
 
+        mMouseSupported = false;
         onInvalidateSink(null);
 
         return true;
     }
 
+    private boolean mMouseSupported = false;
+
     @Override
     public void onInvalidateSink(final Rect rect) {
         if (mSession != null) {
+            if (mSession.input.currScrBuf.windowTitle != null)
+                setTitle(mSession.input.currScrBuf.windowTitle);
             final boolean ms = mSession.output.isMouseSupported();
-            if (!ms) turnOffMouseMode();
-            if (mMenu != null) {
-                final MenuItem mi = mMenu.findItem(R.id.action_mouse);
-                if (mi.isVisible() != ms)
-                    mi.setVisible(ms);
+            if (ms != mMouseSupported) {
+                mMouseSupported = ms;
+                if (!ms) turnOffMouseMode();
+                if (mMenu != null) {
+                    final MenuItem mi = mMenu.findItem(R.id.action_mouse);
+                    if (mi.isVisible() != ms)
+                        mi.setVisible(ms);
+                }
             }
             if (mSession.input.getBell() != 0) {
                 if (!mBellAnim.hasStarted() || mBellAnim.hasEnded())
@@ -388,6 +401,65 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
                         mSession.output.setKeyMap(rules);
                     }
                 }, mSession.output.getKeyMap());
+                return true;
+            }
+            case R.id.action_set_terminal_size: {
+                if (mSession == null) return true;
+                final ViewGroup v = (ViewGroup)
+                        getLayoutInflater().inflate(R.layout.buffer_size_dialog, null);
+                final EditText widthV = v.findViewById(R.id.width);
+                final EditText heightV = v.findViewById(R.id.height);
+                if (mCsv.resizeBufferXOnUi)
+                    widthV.setHint(String.valueOf(mSession.input.currScrBuf.getWidth()));
+                else {
+                    widthV.setText(String.valueOf(mSession.input.currScrBuf.getWidth()));
+                    widthV.setHint(R.string.hint_auto);
+                }
+                if (mCsv.resizeBufferYOnUi)
+                    heightV.setHint(String.valueOf(mSession.input.currScrBuf.getHeight()));
+                else {
+                    heightV.setText(String.valueOf(mSession.input.currScrBuf.getHeight()));
+                    heightV.setHint(R.string.hint_auto);
+                }
+                new AlertDialog.Builder(this)
+                        .setView(v)
+                        .setTitle(R.string.dialog_title_set_terminal_screen_size)
+                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(final DialogInterface dialog, final int which) {
+                                UiUtils.hideIME((Dialog) dialog);
+                                if (mSession != null) {
+                                    int width;
+                                    int height;
+                                    try {
+                                        width = Integer.parseInt(widthV.getText().toString());
+                                    } catch (final IllegalArgumentException e) {
+                                        width = 0;
+                                    }
+                                    try {
+                                        height = Integer.parseInt(heightV.getText().toString());
+                                    } catch (final IllegalArgumentException e) {
+                                        height = 0;
+                                    }
+                                    mCsv.resizeBufferXOnUi = width <= 0;
+                                    mCsv.resizeBufferYOnUi = height <= 0;
+                                    if (mCsv.resizeBufferXOnUi) width = mCsv.getCols();
+                                    if (mCsv.resizeBufferYOnUi) height = mCsv.getRows();
+                                    mSession.input.resize(width, height);
+                                    mCsv.onInvalidateSink(null);
+                                }
+                                dialog.dismiss();
+                            }
+                        })
+                        .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(final DialogInterface dialog, final int which) {
+                                UiUtils.hideIME((Dialog) dialog);
+                                dialog.cancel();
+                            }
+                        })
+                        .setCancelable(true)
+                        .show();
                 return true;
             }
             case R.id.action_terminate: {

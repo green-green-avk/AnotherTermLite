@@ -3,6 +3,7 @@ package green_green_avk.anotherterm.ui;
 import android.animation.LayoutTransition;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.ColorStateList;
@@ -18,6 +19,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.Window;
+import android.view.inputmethod.InputMethodManager;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -78,6 +81,18 @@ public final class UiUtils {
         };
     }
 
+    /* Workaround: the soft keyboard usually remains visible on some devices
+    after the dialog ends */
+    public static void hideIME(final Dialog dialog) {
+        final InputMethodManager imm =
+                (InputMethodManager) dialog.getContext()
+                        .getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm == null) return;
+        final Window w = dialog.getWindow();
+        if (w == null) return;
+        imm.hideSoftInputFromWindow(w.getDecorView().getWindowToken(), 0);
+    }
+
     public static void enableAnimation(@NonNull final View root) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) return;
         if (root instanceof ViewGroup) {
@@ -134,13 +149,13 @@ public final class UiUtils {
                 .setMessage(msg)
                 .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(DialogInterface dialog, int which) {
+                    public void onClick(final DialogInterface dialog, final int which) {
                         dialog.cancel();
                     }
                 })
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(DialogInterface dialog, int which) {
+                    public void onClick(final DialogInterface dialog, final int which) {
                         dialog.dismiss();
                         onConfirm.run();
                     }
@@ -159,14 +174,14 @@ public final class UiUtils {
     public static void setShowContextMenuOnClick(@NonNull final View v) {
         v.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
-            public boolean onLongClick(View v) {
+            public boolean onLongClick(final View v) {
                 showContextMenuOnBottom(v);
                 return true;
             }
         });
         v.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
+            public void onClick(final View v) {
                 showContextMenuOnBottom(v);
             }
         });
@@ -203,7 +218,7 @@ public final class UiUtils {
         final View v = activity.getWindow().getDecorView();
         v.setOnSystemUiVisibilityChangeListener(new View.OnSystemUiVisibilityChangeListener() {
             @Override
-            public void onSystemUiVisibilityChange(int visibility) {
+            public void onSystemUiVisibilityChange(final int visibility) {
                 if ((visibility & View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) == 0) {
                     UiUtils.hideSystemUi(activity);
                 }
@@ -245,7 +260,7 @@ public final class UiUtils {
         final View v = activity.getWindow().getDecorView();
         v.setOnSystemUiVisibilityChangeListener(new View.OnSystemUiVisibilityChangeListener() {
             @Override
-            public void onSystemUiVisibilityChange(int visibility) {
+            public void onSystemUiVisibilityChange(final int visibility) {
                 if ((visibility & View.SYSTEM_UI_FLAG_HIDE_NAVIGATION) == 0) {
                     if (Build.VERSION.SDK_INT >= 19) {
                         UiUtils.hideSystemUiImmersive(activity);

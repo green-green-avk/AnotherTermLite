@@ -3,7 +3,6 @@ package green_green_avk.anotherterm.ui;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Handler;
@@ -18,7 +17,6 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -79,7 +77,7 @@ public final class BackendUiDialogs implements BackendUiInteraction,
                 .setView(v)
                 .setOnCancelListener(new DialogInterface.OnCancelListener() {
                     @Override
-                    public void onCancel(DialogInterface dialog) {
+                    public void onCancel(final DialogInterface dialog) {
                         msgQueue.clear();
                         msgAdapterRef = new WeakReference<>(null);
                     }
@@ -119,34 +117,31 @@ public final class BackendUiDialogs implements BackendUiInteraction,
                         final Activity ctx = ctxRef.getNoBlock();
                         if (ctx == null) return;
                         final EditText et = new EditText(ctx);
-                        final DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                        /* Workaround: the soft keyboard is usually remains visible
+                        final DialogInterface.OnClickListener listener =
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(final DialogInterface dialog, final int which) {
+                        /* Workaround: the soft keyboard usually remains visible
                         after the dialog ends */
-                                final InputMethodManager imm =
-                                        (InputMethodManager) ((AlertDialog) dialog).getContext()
-                                                .getSystemService(Context.INPUT_METHOD_SERVICE);
-                                if (imm != null)
-                                    imm.hideSoftInputFromWindow(et.getWindowToken(), 0);
-                                // ---
-                                if (which == DialogInterface.BUTTON_POSITIVE) {
-                                    promptState = null;
-                                    result.set(et.getText().toString());
-                                    dialog.dismiss();
-                                } else {
-                                    promptState = null;
-                                    result.set(null);
-                                    dialog.dismiss();
-                                }
-                            }
-                        };
+                                        UiUtils.hideIME((Dialog) dialog);
+                                        // ---
+                                        if (which == DialogInterface.BUTTON_POSITIVE) {
+                                            promptState = null;
+                                            result.set(et.getText().toString());
+                                            dialog.dismiss();
+                                        } else {
+                                            promptState = null;
+                                            result.set(null);
+                                            dialog.dismiss();
+                                        }
+                                    }
+                                };
                         et.setInputType(InputType.TYPE_CLASS_TEXT |
                                 InputType.TYPE_TEXT_VARIATION_PASSWORD);
                         final Dialog d = new AlertDialog.Builder(ctx)
                                 .setOnCancelListener(new DialogInterface.OnCancelListener() {
                                     @Override
-                                    public void onCancel(DialogInterface dialog) {
+                                    public void onCancel(final DialogInterface dialog) {
                                         promptState = null;
                                         result.set(null);
                                     }
@@ -159,7 +154,8 @@ public final class BackendUiDialogs implements BackendUiInteraction,
                                 .create();
                         et.setOnEditorActionListener(new TextView.OnEditorActionListener() {
                             @Override
-                            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                            public boolean onEditorAction(final TextView v, final int actionId,
+                                                          final KeyEvent event) {
                                 if (actionId == EditorInfo.IME_ACTION_DONE) {
                             /* We cannot react on ACTION_UP here but it's a reasonable way
                             to avoid a parasite ENTER keystroke in the underlying console view */
@@ -171,7 +167,7 @@ public final class BackendUiDialogs implements BackendUiInteraction,
                         });
                         et.setOnKeyListener(new View.OnKeyListener() {
                             @Override
-                            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                            public boolean onKey(final View v, final int keyCode, KeyEvent event) {
                                 if (event.getAction() == KeyEvent.ACTION_UP
                                         && event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
                                     listener.onClick(d, DialogInterface.BUTTON_POSITIVE);
@@ -208,24 +204,25 @@ public final class BackendUiDialogs implements BackendUiInteraction,
                         if (isShownPrompt()) return;
                         final Activity ctx = ctxRef.getNoBlock();
                         if (ctx == null) return;
-                        final DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                if (which == DialogInterface.BUTTON_POSITIVE) {
-                                    promptState = null;
-                                    result.set(true);
-                                    dialog.dismiss();
-                                } else {
-                                    promptState = null;
-                                    result.set(false);
-                                    dialog.dismiss();
-                                }
-                            }
-                        };
+                        final DialogInterface.OnClickListener listener =
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(final DialogInterface dialog, final int which) {
+                                        if (which == DialogInterface.BUTTON_POSITIVE) {
+                                            promptState = null;
+                                            result.set(true);
+                                            dialog.dismiss();
+                                        } else {
+                                            promptState = null;
+                                            result.set(false);
+                                            dialog.dismiss();
+                                        }
+                                    }
+                                };
                         final Dialog d = new AlertDialog.Builder(ctx)
                                 .setOnCancelListener(new DialogInterface.OnCancelListener() {
                                     @Override
-                                    public void onCancel(DialogInterface dialog) {
+                                    public void onCancel(final DialogInterface dialog) {
                                         promptState = null;
                                         result.set(false);
                                     }

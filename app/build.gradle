@@ -8,8 +8,8 @@ android {
         applicationId 'green_green_avk.anothertermlite'
         minSdkVersion 14
         targetSdkVersion 28
-        versionCode 17
-        versionName "MkIj"
+        versionCode 18
+        versionName "MkIk"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
@@ -60,6 +60,7 @@ dependencies {
     implementation project(':PtyProcess')
     implementation project(':usbserial')
     implementation project(':TelnetClient')
+    implementation 'org.apache.commons:commons-collections4:4.2'
 }
 
 repositories {

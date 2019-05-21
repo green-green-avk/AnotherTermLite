@@ -50,8 +50,11 @@ public final class EventBasedBackendModuleWrapper {
                     break;
                 case MSG_READ:
                     synchronized (readLock) {
-                        listener.onRead((ByteBuffer) msg.obj);
-                        readLock.notify();
+                        try {
+                            listener.onRead((ByteBuffer) msg.obj);
+                        } finally {
+                            readLock.notify();
+                        }
                     }
                     break;
                 case MSG_ERROR:

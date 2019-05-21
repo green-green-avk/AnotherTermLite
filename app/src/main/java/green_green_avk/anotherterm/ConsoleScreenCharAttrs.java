@@ -18,6 +18,10 @@ public final class ConsoleScreenCharAttrs {
         reset();
     }
 
+    public ConsoleScreenCharAttrs(final ConsoleScreenCharAttrs aa) {
+        set(aa);
+    }
+
     public void reset() {
         fgColor = DEF_FG_COLOR;
         bgColor = DEF_BG_COLOR;
@@ -34,5 +38,15 @@ public final class ConsoleScreenCharAttrs {
 
     public void resetBg() {
         bgColor = DEF_BG_COLOR;
+    }
+
+    public void set(final ConsoleScreenCharAttrs aa) {
+        fgColor = aa.fgColor;
+        bgColor = aa.bgColor;
+        inverse = aa.inverse;
+        bold = aa.bold;
+        italic = aa.italic;
+        underline = aa.underline;
+        blinking = aa.blinking;
     }
 }

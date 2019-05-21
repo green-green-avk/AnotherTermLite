@@ -3,20 +3,17 @@ package green_green_avk.anotherterm.utils;
 import android.support.annotation.NonNull;
 
 import java.nio.CharBuffer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public final class EscOsc {
-    private static final Pattern PAT = Pattern.compile(
-            "^\\e](.*?)(?:\\a|\\e\\\\)$", Pattern.DOTALL);
-
     public final String body;
     public final String[] args;
 
     public EscOsc(@NonNull final CharBuffer v) throws IllegalArgumentException {
-        final Matcher m = PAT.matcher(v);
-        if (!m.matches()) throw new IllegalArgumentException("len=" + v.length());
-        body = m.group(1);
+        if (v.charAt(v.length() - 1) == '\\') {
+            body = v.subSequence(2, v.length() - 2).toString();
+        } else {
+            body = v.subSequence(2, v.length() - 1).toString();
+        }
         args = body.split(";");
     }
 

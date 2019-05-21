@@ -43,6 +43,10 @@
         <menu />
     </item>
     <item
+        android:id="@+id/action_set_terminal_size"
+        android:title="@string/action_set_terminal_size"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_terminate"
         android:icon="@drawable/ic_close"
         android:title="@string/action_terminate"
