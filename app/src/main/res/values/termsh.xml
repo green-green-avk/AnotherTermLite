@@ -101,6 +101,13 @@
 
     Notes:
         * `unnamed\' is used if name deduction fails and exit code 2 is returned.
+
+
+    Environment:
+
+    * TERMSH_UID - a real UID for this application to use for spoofing detection.
+                   It\'s actual before Android 6.0:
+                   https://android.googlesource.com/platform/external/sepolicy/+/android-6.0.1_r81/untrusted_app.te#141
 \
 \
 ]]></string>

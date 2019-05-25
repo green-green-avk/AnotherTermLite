@@ -171,7 +171,10 @@ int main(const int argc, const char *const *const argv) {
         perror("Can't check termsh server");
         exit(1);
     }
-    if (cr.uid != getuid()) {
+    const char *const uid_s = getenv("TERMSH_UID");
+    int uid;
+    if (!uid_s || (uid = atoi(uid_s)) == 0) uid = getuid();
+    if (cr.uid != uid) {
         close(sock);
         fprintf(stderr, "Spoofing detected!\n");
         __android_log_write(ANDROID_LOG_ERROR, "termsh", "Spoofing detected!");
