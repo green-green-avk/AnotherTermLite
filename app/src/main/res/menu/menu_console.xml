@@ -49,6 +49,7 @@
     <item
         android:id="@+id/action_terminate"
         android:icon="@drawable/ic_close"
+        android:orderInCategory="200"
         android:title="@string/action_terminate"
         app:showAsAction="never" />
 </menu>

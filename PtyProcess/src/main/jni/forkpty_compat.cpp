@@ -24,7 +24,7 @@ pid_t forkpty(int *const master, char *const slave_name, const struct termios *c
         return -1;
     int pts = open(devname, O_RDWR);
     if (pts < 0) return -1;
-    if (termp) tcsetattr(pts, TCSAFLUSH, termp);
+    if (termp) tcsetattr(pts, TCSANOW, termp);
     if (winp) ioctl(pts, TIOCSWINSZ, winp);
     const pid_t pid = fork();
     if (pid < 0) return -1;

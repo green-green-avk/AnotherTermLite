@@ -4,10 +4,17 @@ import android.content.Context;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.StringRes;
 import android.util.Log;
 
 import java.io.OutputStream;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,17 +24,31 @@ public abstract class BackendModule {
 
     public static class Meta {
         protected final Set<String> schemes;
+        public final Map<Method, ExportMethod> methods;
 
-        public Meta() {
+        public Meta(@NonNull final Class<?> klass) {
             this.schemes = Collections.emptySet();
+            this.methods = initMethods(klass);
         }
 
-        public Meta(@NonNull final String defaultScheme) {
+        public Meta(@NonNull final Class<?> klass, @NonNull final String defaultScheme) {
             this.schemes = Collections.singleton(defaultScheme);
+            this.methods = initMethods(klass);
         }
 
-        public Meta(@NonNull final Set<String> defaultSchemes) {
+        public Meta(@NonNull final Class<?> klass, @NonNull final Set<String> defaultSchemes) {
             this.schemes = Collections.unmodifiableSet(defaultSchemes);
+            this.methods = initMethods(klass);
+        }
+
+        protected Map<Method, ExportMethod> initMethods(@NonNull final Class<?> klass) {
+            final Map<Method, ExportMethod> map = new HashMap<>();
+            for (final Method m : klass.getDeclaredMethods()) {
+                final ExportMethod a = m.getAnnotation(ExportMethod.class);
+                if (a == null) continue;
+                map.put(m, a);
+            }
+            return Collections.unmodifiableMap(map);
         }
 
         @Nullable
@@ -64,22 +85,34 @@ public abstract class BackendModule {
         }
     }
 
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public @interface ExportMethod {
+        @StringRes int titleRes() default 0;
+    }
+
     static Meta getMeta(@NonNull final Class<?> klass, @NonNull final String defaultScheme) {
         try {
             final Field f = klass.getField("meta");
             return (Meta) f.get(null);
-        } catch (final NoSuchFieldException e) {
-            return new Meta(defaultScheme);
-        } catch (final IllegalAccessException e) {
-            return new Meta(defaultScheme);
-        } catch (final NullPointerException e) {
-            return new Meta(defaultScheme);
-        } catch (final ClassCastException e) {
-            return new Meta(defaultScheme);
+        } catch (final NoSuchFieldException ignored) {
+        } catch (final IllegalAccessException ignored) {
+        } catch (final NullPointerException ignored) {
+        } catch (final ClassCastException ignored) {
         } catch (final SecurityException e) {
             Log.e("Backend module", "Different class loaders", e);
-            return new Meta(defaultScheme);
         }
+        return new Meta(klass, defaultScheme);
+    }
+
+    public Object callMethod(@NonNull final Method m, final Object... args) {
+        try {
+            return m.invoke(this, args);
+        } catch (final IllegalAccessException ignored) {
+        } catch (final InvocationTargetException e) {
+            throw (RuntimeException) e.getCause();
+        }
+        return null;
     }
 
     protected Context context = null;

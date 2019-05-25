@@ -157,6 +157,17 @@ static void JNICALL m_destroy(JNIEnv *const env, const jobject jthis) {
     close(fdPtm);
 }
 
+// https://www.win.tue.nl/~aeb/linux/lk/lk-10.html
+static void JNICALL m_sendSignalToForeground(JNIEnv *const env, const jobject jthis,
+                                             const jint sig) {
+    const jint fdPtm = env->GetIntField(jthis, g_fdPtmId);
+    if (env->ExceptionCheck() == JNI_TRUE) return;
+    if (fdPtm < 0) return;
+    const int pgid = tcgetpgrp(fdPtm);
+    if (pgid < 1) return;
+    killpg(pgid, sig);
+}
+
 static void JNICALL m_resize(JNIEnv *const env, const jobject jthis,
                              const jint w, const jint h, const jint wp, const jint hp) {
     const jint fdPtm = env->GetIntField(jthis, g_fdPtmId);
@@ -261,16 +272,17 @@ static jlong JNICALL m_getArgMax(JNIEnv *const env, const jobject jthis) {
 }
 
 static const JNINativeMethod methodTable[] = {
-        {"execve",      "(Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;)L" CLASS_NAME ";",
-                                   (void *) m_execve},
-        {"destroy",     "()V",     (void *) m_destroy},
-        {"resize",      "(IIII)V", (void *) m_resize},
-        {"readByte",    "()I",     (void *) m_readByte},
-        {"readBuf",     "([BII)I", (void *) m_readBuf},
-        {"writeByte",   "(I)V",    (void *) m_writeByte},
-        {"writeBuf",    "([BII)V", (void *) m_writeBuf},
-        {"pollForRead", "(II)Z",   (void *) m_pollForRead},
-        {"getArgMax",   "()J",     (void *) m_getArgMax}
+        {"execve",                 "(Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;)L" CLASS_NAME ";",
+                                              (void *) m_execve},
+        {"destroy",                "()V",     (void *) m_destroy},
+        {"sendSignalToForeground", "(I)V",    (void *) m_sendSignalToForeground},
+        {"resize",                 "(IIII)V", (void *) m_resize},
+        {"readByte",               "()I",     (void *) m_readByte},
+        {"readBuf",                "([BII)I", (void *) m_readBuf},
+        {"writeByte",              "(I)V",    (void *) m_writeByte},
+        {"writeBuf",               "([BII)V", (void *) m_writeBuf},
+        {"pollForRead",            "(II)Z",   (void *) m_pollForRead},
+        {"getArgMax",              "()J",     (void *) m_getArgMax}
 };
 
 extern "C"

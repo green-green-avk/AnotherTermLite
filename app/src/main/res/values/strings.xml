@@ -115,4 +115,6 @@
     <string name="note_a_0_m_follow_window_size">* 0 - follow window size</string>
     <string name="dialog_title_set_terminal_screen_size">Terminal screen size</string>
     <string name="hint_auto">auto</string>
+    <string name="hint_int_value_p_auto_p">%d (auto)</string>
+    <string name="action_send_sigint">Send SIGINT</string>
 </resources>

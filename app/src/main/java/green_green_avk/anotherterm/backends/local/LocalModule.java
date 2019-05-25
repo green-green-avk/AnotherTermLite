@@ -12,13 +12,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 import green_green_avk.anotherterm.BuildConfig;
+import green_green_avk.anotherterm.R;
 import green_green_avk.anotherterm.backends.BackendModule;
 import green_green_avk.ptyprocess.PtyProcess;
 
 public final class LocalModule extends BackendModule {
 
     @Keep
-    public static final Meta meta = new Meta("local_terminal");
+    public static final Meta meta = new Meta(LocalModule.class, "local_terminal");
 
     private final Object connectionLock = new Object();
 
@@ -166,5 +167,16 @@ public final class LocalModule extends BackendModule {
     @Override
     public String getConnDesc() {
         return "LocalModule";
+    }
+
+    /*
+     * If the terminal is in a mode when it does not intercept the `INT' control byte,
+     * this function can be used to substitute Ctrl-C.
+     * https://www.win.tue.nl/~aeb/linux/lk/lk-10.html
+     */
+    @Keep
+    @ExportMethod(titleRes = R.string.action_send_sigint)
+    public void sendSigInt() {
+        proc.sendSignalToForeground(PtyProcess.SIGINT);
     }
 }

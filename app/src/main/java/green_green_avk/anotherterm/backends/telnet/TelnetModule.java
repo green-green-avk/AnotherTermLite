@@ -24,7 +24,7 @@ import green_green_avk.telnetclient.WindowSizeTelnetOptionHandler;
 public final class TelnetModule extends BackendModule {
 
     @Keep
-    public static final Meta meta = new Meta("telnet") {
+    public static final Meta meta = new Meta(TelnetModule.class, "telnet") {
         @Override
         @NonNull
         public Map<String, ?> fromUri(@NonNull final Uri uri) {

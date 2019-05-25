@@ -34,7 +34,7 @@ import green_green_avk.anotherterm.utils.SimpleBiDirHashMap;
 public final class UsbUartModule extends BackendModule {
 
     @Keep
-    public static final Meta meta = new Meta("uart") {
+    public static final Meta meta = new Meta(UsbUartModule.class, "uart") {
         @Override
         @NonNull
         public Map<String, ?> fromUri(@NonNull final Uri uri) {

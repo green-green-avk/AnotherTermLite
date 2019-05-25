@@ -12,6 +12,8 @@ import java.util.Map;
 
 @Keep
 public final class PtyProcess extends Process {
+    public static final int SIGINT = 2;
+
     static {
         System.loadLibrary("ptyprocess");
     }
@@ -110,6 +112,9 @@ public final class PtyProcess extends Process {
     @Override
     @Keep
     public native void destroy();
+
+    @Keep
+    public native void sendSignalToForeground(int signal);
 
     @Keep
     public native void resize(int width, int height, int widthPx, int heightPx);

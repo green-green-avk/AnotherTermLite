@@ -29,9 +29,13 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import java.lang.reflect.Method;
 import java.nio.charset.Charset;
+import java.util.Map;
 
+import green_green_avk.anotherterm.backends.BackendModule;
 import green_green_avk.anotherterm.backends.BackendUiInteractionActivityCtx;
+import green_green_avk.anotherterm.backends.BackendsList;
 import green_green_avk.anotherterm.ui.ConsoleKeyboardView;
 import green_green_avk.anotherterm.ui.ConsoleScreenView;
 import green_green_avk.anotherterm.ui.MouseButtonsWorkAround;
@@ -135,7 +139,8 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
 
         mGestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
-            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            public boolean onFling(final MotionEvent e1, final MotionEvent e2,
+                                   final float velocityX, final float velocityY) {
                 if (mCsv.getSelectionMode()) return true;
                 if (ConsoleService.sessionKeys.size() < 2) return true;
                 if (e1 == null || e2 == null) return true; // avoid null events bug
@@ -158,7 +163,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
         mCsv.setOnTouchListener(
                 new View.OnTouchListener() {
                     @Override
-                    public boolean onTouch(View v, MotionEvent event) {
+                    public boolean onTouch(final View v, final MotionEvent event) {
 //                        UiUtils.hideSystemUi(ConsoleActivity.this); // For earlier versions
                         mGestureDetector.onTouchEvent(event);
                         return false;
@@ -241,10 +246,10 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
 */
         final SubMenu chs = chi.getSubMenu();
         for (final String chn : C.charsetList) {
-            MenuItem mi = chs.add(chn);
+            final MenuItem mi = chs.add(chn);
             mi.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
                 @Override
-                public boolean onMenuItemClick(MenuItem item) {
+                public boolean onMenuItemClick(final MenuItem item) {
                     if (mSession != null) {
                         final String charsetStr = item.getTitle().toString();
                         try {
@@ -261,6 +266,24 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
             });
         }
         if (mSession != null) chi.setTitle(mSession.output.getCharset().name());
+
+        if (mSession != null) {
+            final BackendModule be = mSession.backend.wrapped;
+            for (final Map.Entry<Method, BackendModule.ExportMethod> m :
+                    BackendsList.get(be.getClass()).meta.methods.entrySet()) {
+                final MenuItem mi = menu.add(Menu.NONE, Menu.NONE, 100, m.getValue().titleRes());
+                if (m.getKey().getTypeParameters().length == 0 &&
+                        m.getKey().getReturnType() == Void.TYPE) {
+                    mi.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+                        @Override
+                        public boolean onMenuItemClick(final MenuItem item) {
+                            be.callMethod(m.getKey());
+                            return true;
+                        }
+                    });
+                }
+            }
+        }
 
         mMouseSupported = false;
         onInvalidateSink(null);
@@ -410,13 +433,15 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
                 final EditText widthV = v.findViewById(R.id.width);
                 final EditText heightV = v.findViewById(R.id.height);
                 if (mCsv.resizeBufferXOnUi)
-                    widthV.setHint(String.valueOf(mSession.input.currScrBuf.getWidth()));
+                    widthV.setHint(getString(R.string.hint_int_value_p_auto_p,
+                            mSession.input.currScrBuf.getWidth()));
                 else {
                     widthV.setText(String.valueOf(mSession.input.currScrBuf.getWidth()));
                     widthV.setHint(R.string.hint_auto);
                 }
                 if (mCsv.resizeBufferYOnUi)
-                    heightV.setHint(String.valueOf(mSession.input.currScrBuf.getHeight()));
+                    heightV.setHint(getString(R.string.hint_int_value_p_auto_p,
+                            mSession.input.currScrBuf.getHeight()));
                 else {
                     heightV.setText(String.valueOf(mSession.input.currScrBuf.getHeight()));
                     heightV.setHint(R.string.hint_auto);

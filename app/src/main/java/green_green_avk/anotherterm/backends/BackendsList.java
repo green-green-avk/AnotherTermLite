@@ -96,8 +96,12 @@ public final class BackendsList {
         return id;
     }
 
-    public static Item get(int i) {
+    public static Item get(final int i) {
         return list[i];
+    }
+
+    public static Item get(final Class v) {
+        return get(getId(v));
     }
 
     @NonNull
@@ -105,7 +109,7 @@ public final class BackendsList {
         // configuration related, don't cache
         return new AbstractList<String>() {
             @Override
-            public String get(int index) {
+            public String get(final int index) {
                 return ctx.getString(list[index].title);
             }
 
