@@ -20,15 +20,25 @@ pid_t forkpty(int *const master, char *const slave_name, const struct termios *c
     if (ptm < 0) return -1;
     fcntl(ptm, F_SETFD, FD_CLOEXEC);
     char devname[PATH_MAX];
-    if (grantpt(ptm) || unlockpt(ptm) || ptsname_r(ptm, devname, sizeof(devname)) != 0)
+    if (grantpt(ptm) || unlockpt(ptm) || ptsname_r(ptm, devname, sizeof(devname)) != 0) {
+        close(ptm);
         return -1;
-    int pts = open(devname, O_RDWR);
-    if (pts < 0) return -1;
+    }
+    const int pts = open(devname, O_RDWR);
+    if (pts < 0) {
+        close(ptm);
+        return -1;
+    }
     if (termp) tcsetattr(pts, TCSANOW, termp);
     if (winp) ioctl(pts, TIOCSWINSZ, winp);
     const pid_t pid = fork();
-    if (pid < 0) return -1;
+    if (pid < 0) {
+        close(pts);
+        close(ptm);
+        return -1;
+    }
     if (pid == 0) {
+        close(ptm);
         setsid();
         if (ioctl(pts, TIOCSCTTY, (char *) NULL) == -1) _exit(127);
         dup2(pts, STDIN_FILENO);

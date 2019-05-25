@@ -137,6 +137,10 @@ m_execve(JNIEnv *const env, const jobject jthis,
         const int fdlimit = (int) (sysconf(_SC_OPEN_MAX));
         int fd = 3;
         while (fd < fdlimit) close(fd++);
+
+        sigset_t signals_to_unblock;
+        sigfillset(&signals_to_unblock);
+        sigprocmask(SIG_UNBLOCK, &signals_to_unblock, nullptr);
     }
     if (envp == nullptr) execv(filename, args);
     else execve(filename, args, envp);
@@ -179,7 +183,7 @@ static void JNICALL m_resize(JNIEnv *const env, const jobject jthis,
             .ws_xpixel = (unsigned short) wp,
             .ws_ypixel = (unsigned short) hp
     };
-    ioctl(fdPtm, TIOCSWINSZ, winp);
+    ioctl(fdPtm, TIOCSWINSZ, &winp);
 }
 
 static jint JNICALL m_readByte(JNIEnv *const env, const jobject jthis) {
