@@ -106,6 +106,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
 
     protected void init(final Context context, final AttributeSet attrs,
                         final int defStyleAttr, final int defStyleRes) {
+        final int paddingMarkupAlpha;
         final TypedArray a = context.obtainStyledAttributes(
                 attrs, R.styleable.ConsoleScreenView, defStyleAttr, defStyleRes);
         try {
@@ -114,9 +115,13 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
                     a.getResourceId(R.styleable.ConsoleScreenView_selectionMarker, 0));
             paddingMarkup = AppCompatResources.getDrawable(context,
                     a.getResourceId(R.styleable.ConsoleScreenView_paddingMarkup, 0));
+            paddingMarkupAlpha = (int) (a.getFloat(R.styleable.ConsoleScreenView_paddingMarkupAlpha,
+                    0.2f) * 255);
         } finally {
             a.recycle();
         }
+
+        paddingMarkup.setAlpha(paddingMarkupAlpha);
 
         cursorPaint.setColor(Color.argb(127, 255, 255, 255));
         cursorPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SCREEN));
@@ -124,6 +129,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         selectionPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SCREEN));
         markupPaint.setColor(getResources().getColor(R.color.colorPrimary));
         markupPaint.setStyle(Paint.Style.STROKE);
+        markupPaint.setAlpha(paddingMarkupAlpha);
         markupPaint.setPathEffect(new DashPathEffect(new float[]{10, 20}, 0));
         if (Build.VERSION.SDK_INT >= 21) {
             // At least, devices with Android 4.4.2 can have monospace font width glitches with these settings.
@@ -626,7 +632,8 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
             final Rect rect = getBufferTextRect(0, 0, getWidth(), getHeight());
             for (int j = rect.top; j < rect.bottom; j++) {
                 final float strTop = getBufferDrawPosYF(j);
-                final float strBottom = getBufferDrawPosYF(j + 1);
+                final float strBottom = getBufferDrawPosYF(j + 1)
+                        + 0.5f; // fix for old phones rendering glitch
                 int i = rect.left;
                 while (i < rect.right) {
                     final float strFragLeft = getBufferDrawPosXF(i);

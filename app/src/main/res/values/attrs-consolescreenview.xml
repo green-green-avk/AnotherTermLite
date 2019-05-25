@@ -4,10 +4,12 @@
         <attr name="consoleScreenViewStyle" format="reference" />
         <attr name="selectionMarker" format="reference" />
         <attr name="paddingMarkup" format="reference" />
+        <attr name="paddingMarkupAlpha" format="float" />
     </declare-styleable>
 
     <style name="AppConsoleScreenViewStyle" parent="AppExtKeyboardViewStyle">
         <item name="selectionMarker">@drawable/ic_select_cursor</item>
         <item name="paddingMarkup">@drawable/bg_padding1_tiles</item>
+        <item name="paddingMarkupAlpha">0.2</item>
     </style>
 </resources>
