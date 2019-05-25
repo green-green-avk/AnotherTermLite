@@ -700,7 +700,11 @@ public final class TermSh {
                                 try {
                                     Misc.copy(output, is);
                                 } finally {
-                                    is.close();
+                                    try {
+                                        is.close();
+                                    } finally {
+                                        output.close();
+                                    }
                                 }
                             }
                             break;
