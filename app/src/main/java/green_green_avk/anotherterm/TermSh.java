@@ -28,6 +28,7 @@ import android.system.Os;
 import android.util.Log;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -50,6 +51,7 @@ import green_green_avk.anotherterm.backends.usbUart.UsbUartModule;
 import green_green_avk.anotherterm.ui.BackendUiShell;
 import green_green_avk.anotherterm.utils.BinaryGetOpts;
 import green_green_avk.anotherterm.utils.BlockingSync;
+import green_green_avk.anotherterm.utils.ChrootedFile;
 import green_green_avk.anotherterm.utils.Misc;
 import green_green_avk.ptyprocess.PtyProcess;
 
@@ -184,13 +186,16 @@ public final class TermSh {
             this.ui = ui;
         }
 
-        private static final class ParseException extends Exception {
+        private static final class ParseException extends RuntimeException {
             private ParseException(final String message) {
                 super(message);
             }
         }
 
         private static final class ShellCmdIO {
+            private static final byte CMD_EXIT = 0;
+            private static final byte CMD_OPEN = 1;
+
             private static final int ARGLEN_MAX = 1024 * 1024;
             private static final byte[][] NOARGS = new byte[0][];
 
@@ -205,6 +210,8 @@ public final class TermSh {
             @NonNull
             private final OutputStream stdErr;
             @NonNull
+            private final InputStream ctlIn;
+            @NonNull
             private final String currDir;
             private final byte[][] args;
             private volatile Runnable onTerminate = null;
@@ -214,7 +221,7 @@ public final class TermSh {
                 public void run() {
                     try {
                         while (true) {
-                            final int r = cis.read();
+                            final int r = ctlIn.read();
                             if (r < 0) break;
                         }
                     } catch (final IOException e) {
@@ -284,16 +291,23 @@ public final class TermSh {
                 }
             }
 
+            @NonNull
+            private static ParcelFileDescriptor wrapFD(final FileDescriptor fd)
+                    throws IOException {
+                final ParcelFileDescriptor pfd = ParcelFileDescriptor.dup(fd);
+                try {
+                    close(fd);
+                } catch (final IOException ignored) {
+                }
+                return pfd;
+            }
+
             // TODO: better remove fallbacks
 
             @NonNull
             private static FileInputStream wrapInputFD(final FileDescriptor fd) {
                 try {
-                    final ParcelFileDescriptor pfd = ParcelFileDescriptor.dup(fd);
-                    try {
-                        close(fd);
-                    } catch (final IOException ignored) {
-                    }
+                    final ParcelFileDescriptor pfd = wrapFD(fd);
                     try {
                         return new PtyProcess.InterruptableFileInputStream(pfd);
                     } catch (final IOException e) {
@@ -309,11 +323,7 @@ public final class TermSh {
             @NonNull
             private static FileOutputStream wrapOutputFD(final FileDescriptor fd) {
                 try {
-                    final ParcelFileDescriptor pfd = ParcelFileDescriptor.dup(fd);
-                    try {
-                        close(fd);
-                    } catch (final IOException ignored) {
-                    }
+                    final ParcelFileDescriptor pfd = wrapFD(fd);
                     return new ParcelFileDescriptor.AutoCloseOutputStream(pfd);
                 } catch (final IOException e) {
                     Log.e("TermShServer", "Request", e);
@@ -348,12 +358,71 @@ public final class TermSh {
                 return args;
             }
 
+            private class ShellErrnoException extends IOException {
+                public final int errno;
+
+                public ShellErrnoException(final String message, final int errno) {
+                    super(message);
+                    this.errno = errno;
+                }
+            }
+
             private void exit(final int status) {
                 try {
-                    socket.getOutputStream().write(new byte[]{(byte) status});
+                    socket.getOutputStream().write(new byte[]{CMD_EXIT, (byte) status});
                 } catch (final IOException ignored) {
                 }
                 close();
+            }
+
+            @NonNull
+            private ParcelFileDescriptor open(@NonNull final String name, final int flags)
+                    throws ParseException, IOException {
+                final int errno;
+                try {
+                    final DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                    dos.writeByte(CMD_OPEN);
+                    dos.writeInt(flags);
+                    final byte[] _name = Misc.toUTF8(name);
+                    dos.writeInt(_name.length);
+                    dos.write(_name);
+                    final DataInputStream dis = new DataInputStream(socket.getInputStream());
+                    final byte result = dis.readByte();
+                    if (result == 0) {
+                        final FileDescriptor[] fds = socket.getAncillaryFileDescriptors();
+                        if (fds.length != 1) throw new ParseException("Invalid descriptors");
+                        return wrapFD(fds[0]);
+                    }
+                    errno = dis.readInt();
+                } catch (final IOException e) {
+                    throw new ParseException(e.getMessage());
+                }
+                switch (errno) {
+                    case PtyProcess.ENOENT:
+                        throw new FileNotFoundException(name + ": No such file or directory");
+                    default:
+                        throw new ShellErrnoException(name + ": open() fails with errno=" + errno, errno);
+                }
+            }
+
+            private final ChrootedFile.Ops ops = new ChrootedFile.Ops() {
+                @Override
+                public ParcelFileDescriptor open(final String path, final int flags)
+                        throws IOException, ParseException {
+                    return ShellCmdIO.this.open(path, flags);
+                }
+            };
+
+            @NonNull
+            private ChrootedFile getOriginal(@NonNull final String name)
+                    throws ParseException {
+                return new ChrootedFile(ops, name);
+            }
+
+            @NonNull
+            private File getOriginalFile(@NonNull final String name)
+                    throws ParseException, IOException {
+                return new File(PtyProcess.getPathByFd(open(name, PtyProcess.O_PATH).getFd()));
             }
 
             private ShellCmdIO(@NonNull final LocalSocket socket)
@@ -363,11 +432,12 @@ public final class TermSh {
                 currDir = parsePwd(cis);
                 args = parseArgs(cis);
                 final FileDescriptor[] ioFds = socket.getAncillaryFileDescriptors();
-                if (ioFds == null || ioFds.length != 3)
-                    throw new ParseException("No file descriptors");
+                if (ioFds == null || ioFds.length != 4)
+                    throw new ParseException("Bad descriptors");
                 stdIn = wrapInputFD(ioFds[0]);
                 stdOut = wrapOutputFD(ioFds[1]);
                 stdErr = wrapOutputFD(ioFds[2]);
+                ctlIn = wrapInputFD(ioFds[3]);
                 cth.start();
             }
         }
@@ -447,7 +517,7 @@ public final class TermSh {
                             final Integer _id = (Integer) opts.get("id");
                             if (opts.containsKey("remove")) {
                                 if (_id == null)
-                                    throw new ParseException("`id' argument is obligatory");
+                                    throw new ParseException("`id' argument is mandatory");
                                 ui.removeNotification(_id);
                                 break;
                             }
@@ -496,7 +566,7 @@ public final class TermSh {
                                 if (opts.containsKey("uri")) {
                                     uri = Uri.parse(filename);
                                 } else {
-                                    final File file = getFileWithCWD(shellCmd.currDir, filename);
+                                    final File file = shellCmd.getOriginalFile(filename);
                                     checkFile(file);
                                     try {
                                         uri = FileProvider.getUriForFile(ui.ctx,
@@ -546,7 +616,7 @@ public final class TermSh {
                                     if (opts.containsKey("uri")) {
                                         uri = Uri.parse(name);
                                     } else {
-                                        final File file = getFileWithCWD(shellCmd.currDir, name);
+                                        final File file = shellCmd.getOriginalFile(name);
                                         checkFile(file);
                                         try {
                                             uri = FileProvider.getUriForFile(ui.ctx,
@@ -610,7 +680,7 @@ public final class TermSh {
                             if (title == null) title = "Pick document";
 
                             OutputStream output;
-                            final File outputFile;
+                            final ChrootedFile outputFile;
                             switch (shellCmd.args.length - ap.position) {
                                 case 0:
                                     output = shellCmd.stdOut;
@@ -619,7 +689,7 @@ public final class TermSh {
                                 case 1: {
                                     output = null;
                                     final String name = Misc.fromUTF8(shellCmd.args[ap.position]);
-                                    final File f = getFileWithCWD(shellCmd.currDir, name);
+                                    final ChrootedFile f = shellCmd.getOriginal(name);
                                     if (f.isDirectory()) {
                                         outputFile = f;
                                     } else if (f.exists()) {
@@ -628,14 +698,14 @@ public final class TermSh {
                                         }
                                         outputFile = f;
                                     } else {
-                                        final File pf = f.getParentFile();
+                                        final ChrootedFile pf = f.getParent();
                                         if (pf == null || !pf.isDirectory()) {
-                                            throw new ParseException("Directory is does not exist");
+                                            throw new ParseException("Directory does not exist");
                                         }
                                         outputFile = pf;
                                     }
                                     if (!outputFile.canWrite()) {
-                                        throw new ParseException("Write access denied");
+                                        throw new ParseException("Directory write access denied");
                                     }
                                     break;
                                 }
@@ -649,7 +719,7 @@ public final class TermSh {
                             final RequesterActivity.OnResult onResult =
                                     new RequesterActivity.OnResult() {
                                         @Override
-                                        public void onResult(@Nullable Intent result) {
+                                        public void onResult(@Nullable final Intent result) {
                                             r.setIfIsNotSet(result);
                                         }
                                     };
@@ -681,16 +751,17 @@ public final class TermSh {
                                 if (outputFile.isDirectory()) {
                                     String filename = getName(uri);
                                     if (filename == null) {
-                                        shellCmd.stdErr.write(Misc.toUTF8("Cannot deduce file name\n"));
+                                        shellCmd.stdErr.write(
+                                                Misc.toUTF8("Cannot deduce file name\n"));
                                         filename = C.UNNAMED_FILE_NAME;
                                         exitStatus = 2;
                                     }
-                                    final File of = new File(outputFile, filename);
+                                    final ChrootedFile of = outputFile.getChild(filename);
                                     if (!opts.containsKey("force") && of.isFile())
                                         throw new ParseException("File already exists");
-                                    output = new FileOutputStream(of);
+                                    output = new FileOutputStream(of.create().getOriginalFile());
                                 } else {
-                                    output = new FileOutputStream(outputFile);
+                                    output = new FileOutputStream(outputFile.getOriginalFile());
                                 }
                             }
                             if (opts.containsKey("uri")) {
@@ -724,7 +795,7 @@ public final class TermSh {
                                 fromUri = Uri.parse(name);
                                 is = openInputStream(fromUri);
                             } else if ((name = (String) opts.get("from-path")) != null) {
-                                fromFile = getFileWithCWD(shellCmd.currDir, name);
+                                fromFile = shellCmd.getOriginalFile(name);
                                 is = new FileInputStream(fromFile);
                             } else {
                                 is = shellCmd.stdIn;
@@ -732,7 +803,7 @@ public final class TermSh {
                             if ((name = (String) opts.get("to-uri")) != null) {
                                 os = openOutputStream(Uri.parse(name));
                             } else if ((name = (String) opts.get("to-path")) != null) {
-                                File of = getFileWithCWD(shellCmd.currDir, name);
+                                ChrootedFile of = shellCmd.getOriginal(name);
                                 if (of.isDirectory()) {
                                     String filename = null;
                                     if (fromUri != null) {
@@ -745,11 +816,11 @@ public final class TermSh {
                                         filename = C.UNNAMED_FILE_NAME;
                                         exitStatus = 2;
                                     }
-                                    of = new File(of, filename);
+                                    of = of.getChild(filename);
                                 }
                                 if (!opts.containsKey("force") && of.isFile())
                                     throw new ParseException("File already exists");
-                                os = new FileOutputStream(of);
+                                os = new FileOutputStream(of.create().getOriginalFile());
                             } else {
                                 os = shellCmd.stdOut;
                             }
@@ -765,14 +836,17 @@ public final class TermSh {
                             break;
                         }
                         case "cat": {
-                            if (shellCmd.args.length != 2)
-                                throw new ParseException("Wrong number of arguments");
-                            final Uri uri = Uri.parse(Misc.fromUTF8(shellCmd.args[1]));
-                            final InputStream is = openInputStream(uri);
-                            try {
-                                Misc.copy(shellCmd.stdOut, is);
-                            } finally {
-                                is.close();
+                            if (!PtyProcess.isatty(shellCmd.stdIn) || shellCmd.args.length < 2) {
+                                Misc.copy(shellCmd.stdOut, shellCmd.stdIn);
+                            }
+                            for (int i = 1; i < shellCmd.args.length; ++i) {
+                                final Uri uri = Uri.parse(Misc.fromUTF8(shellCmd.args[i]));
+                                final InputStream is = openInputStream(uri);
+                                try {
+                                    Misc.copy(shellCmd.stdOut, is);
+                                } finally {
+                                    is.close();
+                                }
                             }
                             break;
                         }

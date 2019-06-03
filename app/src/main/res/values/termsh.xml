@@ -71,12 +71,15 @@
         -f|--force - permit destination overwriting
 
 
-    * cat <URI>
+    * cat [<URI> ...]
 
-        Copy specified Android URI content to the stdout.
+        Concatenate the stdin (if not a tty or no arguments given) and specified Android URIs content to the stdout.
 
-        Examples: $TERMSH cat content://$APP_ID.linksprovider/html/some_url_to_be_wrapped_into_html
-                  uri="`$TERMSH pick -u`" ; $TERMSH cat "$uri" > "`$TERMSH name \"$uri\"`.new"
+        Examples:
+
+            $TERMSH cat content://$APP_ID.linksprovider/html/some_url_to_be_wrapped_into_html
+
+            uri="`$TERMSH pick -u`" ; $TERMSH cat "$uri" > "`$TERMSH name \"$uri\"`.new"
 
 
     * name <URI>

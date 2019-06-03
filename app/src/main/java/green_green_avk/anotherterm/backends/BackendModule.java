@@ -24,7 +24,7 @@ public abstract class BackendModule {
 
     public static class Meta {
         protected final Set<String> schemes;
-        public final Map<Method, ExportMethod> methods;
+        public final Map<Method, ExportedUIMethod> methods;
 
         public Meta(@NonNull final Class<?> klass) {
             this.schemes = Collections.emptySet();
@@ -41,10 +41,10 @@ public abstract class BackendModule {
             this.methods = initMethods(klass);
         }
 
-        protected Map<Method, ExportMethod> initMethods(@NonNull final Class<?> klass) {
-            final Map<Method, ExportMethod> map = new HashMap<>();
+        protected Map<Method, ExportedUIMethod> initMethods(@NonNull final Class<?> klass) {
+            final Map<Method, ExportedUIMethod> map = new HashMap<>();
             for (final Method m : klass.getDeclaredMethods()) {
-                final ExportMethod a = m.getAnnotation(ExportMethod.class);
+                final ExportedUIMethod a = m.getAnnotation(ExportedUIMethod.class);
                 if (a == null) continue;
                 map.put(m, a);
             }
@@ -87,7 +87,7 @@ public abstract class BackendModule {
 
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.METHOD)
-    public @interface ExportMethod {
+    public @interface ExportedUIMethod {
         @StringRes int titleRes() default 0;
     }
 

@@ -270,7 +270,11 @@ static jboolean JNICALL m_pollForRead(JNIEnv *const env, const jobject jthis,
         }
         return JNI_TRUE;
     }
-    return (pfds[0].revents & POLLIN) ? JNI_FALSE : JNI_TRUE;
+    return (jboolean) ((pfds[0].revents & POLLIN) ? JNI_FALSE : JNI_TRUE);
+}
+
+static jboolean JNICALL m_isatty(JNIEnv *const env, const jobject jthis, const jint fd) {
+    return (jboolean) (isatty(fd) ? JNI_TRUE : JNI_FALSE);
 }
 
 static jlong JNICALL m_getArgMax(JNIEnv *const env, const jobject jthis) {
@@ -288,6 +292,7 @@ static const JNINativeMethod methodTable[] = {
         {"writeByte",              "(I)V",    (void *) m_writeByte},
         {"writeBuf",               "([BII)V", (void *) m_writeBuf},
         {"pollForRead",            "(II)Z",   (void *) m_pollForRead},
+        {"isatty",                 "(I)Z",    (void *) m_isatty},
         {"getArgMax",              "()J",     (void *) m_getArgMax}
 };
 

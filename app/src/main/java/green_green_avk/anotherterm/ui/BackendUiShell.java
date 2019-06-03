@@ -18,7 +18,7 @@ public final class BackendUiShell implements BackendUiInteraction, BackendUiInte
     private volatile OutputStream stdOut = null;
     private volatile OutputStream stdErr = null;
 
-    private void put(@Nullable final OutputStream stream, @NonNull final String message) {
+    private static void put(@Nullable final OutputStream stream, @NonNull final String message) {
         if (stream != null) {
             try {
                 stream.write(Misc.toUTF8(message));

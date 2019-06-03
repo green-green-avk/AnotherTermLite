@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/user.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -12,6 +13,7 @@
 #include <stdlib.h>
 #include <termios.h>
 #include <signal.h>
+#include <fcntl.h>
 
 #include <android/log.h>
 
@@ -94,6 +96,44 @@ static ssize_t sendFds(const int sockfd, const void *const data, const size_t le
     return TEMP_FAILURE_RETRY(sendmsg(sockfd, &msg, flags));
 }
 
+static void readAllOrExit(const int sock, void *const buf, const size_t len) {
+    int offset = 0;
+    while (true) {
+        const ssize_t r = read(sock, (char *) buf + offset, len - offset);
+        if (r <= 0) {
+            close(sock);
+            perror("Error receiving data from termsh server");
+            exit(1);
+        }
+        offset += r;
+        if (offset >= len) return;
+    }
+}
+
+static void writeAllOrExit(const int sock, const void *const buf, const size_t len) {
+    int offset = 0;
+    while (true) {
+        const ssize_t r = write(sock, (char *) buf + offset, len - offset);
+        if (r <= 0) {
+            close(sock);
+            perror("Error sending data from termsh server");
+            exit(1);
+        }
+        offset += r;
+        if (offset >= len) return;
+    }
+}
+
+static void sendFdsOrExit(const int sock, const void *const buf, const size_t len,
+                          const int *const fds, const size_t fdsc) {
+    const ssize_t r = sendFds(sock, buf, len, fds, fdsc);
+    if (r <= 0) {
+        close(sock);
+        perror("Error sending data from termsh server");
+        exit(1);
+    }
+}
+
 static bool saved_in = false;
 static struct termios def_mode_in;
 static bool saved_out = false;
@@ -130,6 +170,9 @@ static void _onSignalExit(int s) {
     exit(1);
 }
 
+#define CMD_EXIT 0
+#define CMD_OPEN 1
+
 int main(const int argc, const char *const *const argv) {
     options_t options = {.raw = false};
 
@@ -139,11 +182,19 @@ int main(const int argc, const char *const *const argv) {
     c_argc -= args_offset;
     c_argv += args_offset;
 
+    if (c_argc > 127) {
+        fprintf(stderr, "Too many arguments\n");
+        exit(1);
+    }
+
     saveMode();
     atexit(_onExit);
     signal(SIGTERM, _onSignalExit);
     signal(SIGINT, _onSignalExit);
+    signal(SIGQUIT, _onSignalExit);
+    signal(SIGHUP, _onSignalExit);
     signal(SIGPIPE, _onSignalExit);
+    signal(SIGALRM, _onSignalExit);
     signal(SIGUSR1, _onSignalExit);
     signal(SIGUSR2, _onSignalExit);
 
@@ -184,44 +235,71 @@ int main(const int argc, const char *const *const argv) {
         char buf[PATH_MAX];
         if (getcwd(buf, sizeof(buf)) == nullptr) {
             close(sock);
-            perror("Error sending CWD");
+            perror("Error getting CWD");
             exit(1);
         }
         const size_t l = strlen(buf);
         const uint32_t _l = htonl(l); // always big-endian
-        if (write(sock, &_l, 4) < 0 || write(sock, buf, l) < 0) {
-            close(sock);
-            perror("Error sending CWD");
-            exit(1);
-        }
+        writeAllOrExit(sock, &_l, 4);
+        writeAllOrExit(sock, buf, l);
     }
-    const int fds[] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+    // Android LocalSocket is good but still poor implemented:
+    // there is no poll() method and raw FD is also inaccessible...
+    // This pipe is only for signals / exit tracking now:
+    // the local socket is used purely to request this tool in order to resolve
+    // anything sandbox (PRoot, fakechroot etc.) related.
+    int ctlFds[2];
+    if (pipe(ctlFds) < 0) {
+        close(sock);
+        perror("Error creating control pipe");
+        exit(1);
+    }
+    const int fds[] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO, ctlFds[0]};
     const char _argc = (char) c_argc;
-    if (sendFds(sock, &_argc, 1, fds, 3) < 0) goto error_args;
+    sendFdsOrExit(sock, &_argc, 1, fds, sizeof(fds) / sizeof(fds[0]));
     for (int i = 0; i < c_argc; ++i) {
         const size_t l = strlen(c_argv[i]);
         const uint32_t _l = htonl(l); // always big-endian
-        if (write(sock, &_l, 4) < 0) goto error_args;
-        if (write(sock, c_argv[i], l) < 0) goto error_args;
+        writeAllOrExit(sock, &_l, 4);
+        writeAllOrExit(sock, c_argv[i], l);
     }
+    close(ctlFds[0]);
     while (true) {
-        char result;
-        const ssize_t r = read(sock, &result, 1);
-        if (r < 0) {
-            close(sock);
-            perror("Error receiving result");
-            exit(1);
+        char cmd;
+        readAllOrExit(sock, &cmd, sizeof(cmd));
+        switch (cmd) {
+            case CMD_EXIT: {
+                char result;
+                readAllOrExit(sock, &result, sizeof(result));
+                close(sock);
+                exit(result);
+            }
+            case CMD_OPEN: {
+                int32_t flags;
+                readAllOrExit(sock, &flags, sizeof(flags));
+                flags = ntohl(flags);
+                uint32_t name_len;
+                readAllOrExit(sock, &name_len, sizeof(name_len));
+                name_len = ntohl(name_len);
+                char name[name_len + 1];
+                readAllOrExit(sock, name, name_len);
+                name[name_len] = '\0';
+                const int r = open(name, flags, 00600);
+                if (r < 0) {
+                    const char result = -1;
+                    writeAllOrExit(sock, &result, sizeof(result));
+                    const int32_t err = htonl(errno);
+                    writeAllOrExit(sock, &err, sizeof(err));
+                } else {
+                    const char result = 0;
+                    sendFdsOrExit(sock, &result, sizeof(result), &r, 1);
+                    close(r);
+                }
+                break;
+            }
+            default:
+                fprintf(stderr, "Termsh server protocol error\n");
+                exit(1);
         }
-        if (r == 0) {
-            close(sock);
-            perror("Error parsing arguments");
-            exit(1);
-        }
-        close(sock);
-        exit(result);
     }
-    error_args:
-    close(sock);
-    perror("Error sending arguments");
-    exit(1);
 }

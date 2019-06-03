@@ -170,13 +170,20 @@ public final class LocalModule extends BackendModule {
     }
 
     /*
-     * If the terminal is in a mode when it does not intercept the `INT' control byte,
-     * this function can be used to substitute Ctrl-C.
+     * If the terminal is in a mode when it does not intercept some control bytes,
+     * the functions below can be used to send appropriate signals to the foreground process group.
      * https://www.win.tue.nl/~aeb/linux/lk/lk-10.html
      */
+
     @Keep
-    @ExportMethod(titleRes = R.string.action_send_sigint)
+    @ExportedUIMethod(titleRes = R.string.action_send_sigint)
     public void sendSigInt() {
         proc.sendSignalToForeground(PtyProcess.SIGINT);
+    }
+
+    @Keep
+    @ExportedUIMethod(titleRes = R.string.action_send_sighup)
+    public void sendSigHup() {
+        proc.sendSignalToForeground(PtyProcess.SIGHUP);
     }
 }
