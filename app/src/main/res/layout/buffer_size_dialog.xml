@@ -40,10 +40,4 @@
                 android:inputType="number" />
         </TableRow>
     </TableLayout>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:padding="@dimen/text_padding"
-        android:text="@string/note_a_0_m_follow_window_size" />
 </LinearLayout>

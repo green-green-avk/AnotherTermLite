@@ -8,7 +8,6 @@
     <string name="action_charset">Charset</string>
     <string name="action_settings">Settings</string>
     <string name="action_new_favorite">New Favorite</string>
-    <string name="conntype_loopback">Loopback</string>
     <string name="conntype_uart">UART</string>
     <string name="msg_copied_to_clipboard">Copied to clipboard</string>
     <string name="msg_connected">Connected</string>
@@ -112,7 +111,6 @@
     <string name="label_width">Width</string>
     <string name="label_height">Height</string>
     <string name="action_set_terminal_size">Set size</string>
-    <string name="note_a_0_m_follow_window_size">* 0 - follow window size</string>
     <string name="dialog_title_set_terminal_screen_size">Terminal screen size</string>
     <string name="hint_auto">auto</string>
     <string name="hint_int_value_p_auto_p">%d (auto)</string>
