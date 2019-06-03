@@ -166,7 +166,7 @@ public final class LocalModule extends BackendModule {
     @NonNull
     @Override
     public String getConnDesc() {
-        return "LocalModule";
+        return "Local Terminal";
     }
 
     /*
