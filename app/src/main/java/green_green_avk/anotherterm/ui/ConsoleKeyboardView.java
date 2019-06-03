@@ -1,5 +1,6 @@
 package green_green_avk.anotherterm.ui;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -10,6 +11,7 @@ import android.util.AttributeSet;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
@@ -46,11 +48,10 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
     }
 
     private void init() {
-        applyConfig(getResources().getConfiguration());
         setOnKeyboardActionListener(this);
         setOnKeyListener(new OnKeyListener() {
             @Override
-            public boolean onKey(View v, int keyCode, KeyEvent event) {
+            public boolean onKey(final View v, final int keyCode, final KeyEvent event) {
                 if (keyCode == KeyEvent.KEYCODE_BACK)
                     return false; // Don't prevent default behavior
                 if ((event.getSource() & InputDevice.SOURCE_ANY & (
@@ -68,13 +69,20 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
         requestFocus();
     }
 
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        applyConfig(getResources().getConfiguration());
+    }
+
     private void applyConfig(final Configuration cfg) {
         final Resources res = getContext().getResources();
         final float keyW = cfg.screenWidthDp / cfg.fontScale / 20;
         final int kbdRes =
-                keyW >= res.getDimension(R.dimen.kbd_key_size) / res.getDisplayMetrics().scaledDensity
+                keyW >= res.getDimension(R.dimen.kbd_key_size)
+                        / res.getDisplayMetrics().scaledDensity
                         ? R.xml.console_keyboard_wide : R.xml.console_keyboard;
-        setKeyboard(new ExtKeyboard(getContext(), kbdRes)); // TODO: Keyboard class resize() implementation...
+        setKeyboard(new ExtKeyboard(getContext(), kbdRes));
         if (cfg.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_YES) {
             showIme(isHidden());
         } else {
@@ -100,8 +108,6 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
         consoleOutput.paste(v);
     }
 
-    public boolean trackIme = false;
-
     protected int getImeHeight() {
         final View v = getRootView();
         final Rect vr = new Rect();
@@ -112,22 +118,8 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
     }
 
     @Override
-    public void onMeasure(final int widthMeasureSpec, final int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        if (mHidden || !trackIme) return;
-        if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) return;
-        // TODO: Trying gently negotiate IME animation...
-        int height = getDesiredHeight() - getImeHeight();
-        if (height < 0) height = 0;
-        else if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.AT_MOST
-                && height > MeasureSpec.getSize(heightMeasureSpec))
-            height = MeasureSpec.getSize(heightMeasureSpec);
-        setMeasuredDimension(getMeasuredWidth(), height);
-    }
-
-    @Override
     public void onSizeChanged(final int w, final int h, final int oldw, final int oldh) {
-        super.onSizeChanged(w, trackIme ? getDesiredHeight() : h, oldw, oldh);
+        super.onSizeChanged(w, h, oldw, oldh);
     }
 
     protected boolean imeIsShown = false;
@@ -158,6 +150,11 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
     protected final Runnable rShowSelf = new Runnable() {
         @Override
         public void run() {
+            final Context ctx = getContext();
+            if (ctx instanceof Activity)
+                ((Activity) ctx).getWindow().setSoftInputMode(
+                        WindowManager.LayoutParams.SOFT_INPUT_STATE_UNCHANGED |
+                                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
             mHidden = false;
             requestLayout();
         }
@@ -166,6 +163,12 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
     protected final Runnable rHideSelf = new Runnable() {
         @Override
         public void run() {
+            final Context ctx = getContext();
+            if (ctx instanceof Activity) {
+                ((Activity) ctx).getWindow().setSoftInputMode(
+                        WindowManager.LayoutParams.SOFT_INPUT_STATE_UNCHANGED |
+                                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+            }
             mHidden = true;
             requestLayout();
         }
@@ -175,19 +178,10 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
         mHandler.removeCallbacks(rShowSelf);
         mHandler.removeCallbacks(rHideSelf);
         if (v) {
-            if (trackIme) {
-                mHandler.postDelayed(rHideSelf, 500);
-            } else {
-                mHidden = true;
-                requestLayout();
-            }
+            rHideSelf.run();
             _showIme();
         } else {
-            if (trackIme) {
-                mHidden = false;
-            } else {
-                mHandler.postDelayed(rShowSelf, 500);
-            }
+            mHandler.postDelayed(rShowSelf, 500);
             _hideIme();
         }
     }
@@ -197,7 +191,8 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
     }
 
     public void useIme(final boolean v) {
-        if (getResources().getConfiguration().hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_YES)
+        if (getResources().getConfiguration().hardKeyboardHidden ==
+                Configuration.HARDKEYBOARDHIDDEN_YES)
             showIme(v); // Hardware keyboard backspace key suppression bug workaround
         else
             setHidden(v);

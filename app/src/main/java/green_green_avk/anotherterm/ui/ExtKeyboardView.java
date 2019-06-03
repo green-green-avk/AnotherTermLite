@@ -132,22 +132,25 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
 
     protected WeakHandler mHandler = new WeakHandler();
 
-    public ExtKeyboardView(Context context, AttributeSet attrs) {
+    public ExtKeyboardView(final Context context, final AttributeSet attrs) {
         this(context, attrs, R.attr.extKeyboardViewStyle);
     }
 
-    public ExtKeyboardView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public ExtKeyboardView(final Context context, final AttributeSet attrs,
+                           final int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init(context, attrs, defStyleAttr, R.style.AppExtKeyboardViewStyle);
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public ExtKeyboardView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public ExtKeyboardView(final Context context, final AttributeSet attrs,
+                           final int defStyleAttr, final int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
         init(context, attrs, defStyleAttr, defStyleRes);
     }
 
-    protected void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    private void init(final Context context, final AttributeSet attrs,
+                      final int defStyleAttr, final int defStyleRes) {
         final TypedArray a = context.obtainStyledAttributes(
                 attrs, R.styleable.ExtKeyboardView, defStyleAttr, defStyleRes);
         try {
