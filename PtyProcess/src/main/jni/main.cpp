@@ -155,6 +155,8 @@ static void JNICALL m_destroy(JNIEnv *const env, const jobject jthis) {
     if (fdPtm < 0) return;
     const jint pid = env->GetIntField(jthis, g_pidId);
     if (env->ExceptionCheck() == JNI_TRUE) return;
+    const int pgid = tcgetpgrp(fdPtm);
+    if (pgid > 0) killpg(pgid, SIGHUP);
     kill(pid, SIGTERM);
     env->SetIntField(jthis, g_fdPtmId, -1);
     if (env->ExceptionCheck() == JNI_TRUE) return;
