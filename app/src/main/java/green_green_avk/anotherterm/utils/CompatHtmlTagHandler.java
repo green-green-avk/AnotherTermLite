@@ -12,7 +12,9 @@ import java.util.Stack;
 
 // TODO: correct
 // https://stackoverflow.com/questions/44259072/leadingmarginspan-not-indented-correctly-for-multilevel-nested-bullets
-// It seems actual for API < 24 only.
+// It seems actual for API < 24 only...
+// ...and sorry guys, it seems, devices with API >= 24 also have some problems with lists...
+// Compat tags lic, ulc, olc are added.
 public final class CompatHtmlTagHandler implements Html.TagHandler {
 
     private final Stack<Object> lists = new Stack<>();
@@ -25,6 +27,7 @@ public final class CompatHtmlTagHandler implements Html.TagHandler {
         tag = tag.toLowerCase();
         if (opening) {
             switch (tag) {
+                case "lic":
                 case "li": {
                     if (output.length() > 0 && output.charAt(output.length() - 1) != '\n') {
                         output.append("\n\n");
@@ -35,9 +38,11 @@ public final class CompatHtmlTagHandler implements Html.TagHandler {
                     lis.push(span);
                     break;
                 }
+                case "ulc":
                 case "ul":
                     lists.push(null);
                     break;
+                case "olc":
                 case "ol":
                     lists.push(1);
                     break;
@@ -47,6 +52,7 @@ public final class CompatHtmlTagHandler implements Html.TagHandler {
             }
         } else {
             switch (tag) {
+                case "lic":
                 case "li": {
                     if (lis.empty()) break;
                     if (output.length() > 0 && output.charAt(output.length() - 1) != '\n') {
@@ -54,19 +60,23 @@ public final class CompatHtmlTagHandler implements Html.TagHandler {
                     }
                     final LeadingMarginSpan span = lis.pop();
                     final int start = output.getSpanStart(span);
-                    final int end = output.length();
-                    output.setSpan(span, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    Object list;
+                    final int end;
+                    final Object list;
                     if (!lists.empty() && (list = lists.peek()) instanceof Integer) {
                         output.insert(start, list.toString() + ") ");
                         lists.pop();
                         lists.push((int) list + 1);
+                        end = output.length();
                     } else {
-                        output.setSpan(new BulletSpan(15), start, end,
+                        end = output.length();
+                        output.setSpan(new BulletSpan(lis.empty() ? 15 : 0), start, end,
                                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     }
+                    output.setSpan(span, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     break;
                 }
+                case "ulc":
+                case "olc":
                 case "ul":
                 case "ol": {
                     if (lists.empty()) break;
