@@ -87,8 +87,13 @@ public final class LinksProvider extends ContentProvider {
 
     @NonNull
     private byte[] buildContent(@NonNull final Uri uri) {
-        return String.format(Locale.getDefault(), contentFmt, uri.getQueryParameter("name"),
-                uri.toString()).getBytes();
+        String name = null;
+        try {
+            name = uri.getQueryParameter("name");
+        } catch (final UnsupportedOperationException ignored) {
+        }
+        if (name == null) name = uri.toString();
+        return String.format(Locale.getDefault(), contentFmt, name, uri.toString()).getBytes();
     }
 
     private final PipeDataWriter<String> streamWriter = new PipeDataWriter<String>() {
