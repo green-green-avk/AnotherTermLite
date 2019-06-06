@@ -14,30 +14,29 @@ Why another one? Just to have:
 
 Features:
 
-* Interface for custom connection modules in separate applications will be added later.
+* Minimum supported Android version is 4.0 Ice Cream Sandwich.
 
 * Supported USB UART devices: Generic USB CDC, CP210X, FTDI, PL2303, CH34x, CP2130 SPI-USB.
-
-* No SSH in the Lite version.
-
-* And no MoSH.
-
-* Telnet (no encryption).
 
 * Local Linux pty (aka terminal emulator) is supported. Feel free to follow directions from
 http://kevinboone.net/android_nonroot.html
 "Using standard Linux utilities in a stock, non-rooted Android device"
 by Kevin Boone. ;)
 
-* The introduction of a shell utility to interact with the Android environment has been started. Content exchange between other applications and own files / pipes has been implemented like in Termux. USB serial port dongle access from the command line has also been implemented (unlike Termux) ;).
+* Shell tool to interact with the Android environment is also present.
+   - Content exchange between other applications and own files / pipes has been implemented (like Termux).
+   - It also works in chrooted environments (PRoot at least).
+   - USB serial port dongle access from the command line is also implemented (unlike Termux) ;).
 
-* Arbitrary content providers support will be added later.
+* Telnet (no encryption).
 
-* Different charsets and customizable key mapping support.
+* No SSH in the Lite version.
+
+* And no MoSH.
 
 * Builtin screen keyboard and mouse.
 
-* Minimum supported Android version is 4.0 Ice Cream Sandwich.
+* Different charsets and customizable key mapping support.
 
 
 3rd party components:
