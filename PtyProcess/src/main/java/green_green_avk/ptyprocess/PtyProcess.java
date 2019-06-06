@@ -395,8 +395,7 @@ public final class PtyProcess extends Process {
 
     @NonNull
     public static String getPathByFd(final int fd) throws IOException {
-        final String pp = String.format(Locale.ROOT,
-                "/proc/%d/fd/%d", android.os.Process.myPid(), fd);
+        final String pp = String.format(Locale.ROOT, "/proc/self/fd/%d", fd);
         return new File(pp).getCanonicalPath();
     }
 
