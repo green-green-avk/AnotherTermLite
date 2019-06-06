@@ -75,7 +75,8 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
     };
 
     protected final Paint mPaint = new Paint();
-    protected final Rect mPadding = new Rect(0, 0, 0, 0);
+    protected final Rect mKeyPadding = new Rect(0, 0, 0, 0);
+    protected final Rect mLedPadding = new Rect(0, 0, 0, 0);
 
     protected boolean mAutoRepeatAllowed = true; // widget own option
     protected int mAutoRepeatDelay;
@@ -92,6 +93,7 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
     protected float mShadowRadius;
     protected int mShadowColor;
     protected Drawable mKeyBackground;
+    protected Drawable mLedBackground;
     protected Drawable mPopupBackground;
     protected Drawable mPopupKeyBackground;
 
@@ -157,6 +159,8 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
 //            mKeyBackground = a.getDrawable(R.styleable.ExtKeyboardView_keyBackground);
             mKeyBackground = AppCompatResources.getDrawable(context,
                     a.getResourceId(R.styleable.ExtKeyboardView_keyBackground, 0));
+            mLedBackground = AppCompatResources.getDrawable(context,
+                    a.getResourceId(R.styleable.ExtKeyboardView_ledBackground, 0));
             mVerticalCorrection = a.getDimensionPixelOffset(R.styleable.ExtKeyboardView_verticalCorrection, 0);
             mKeyTextSize = a.getDimensionPixelSize(R.styleable.ExtKeyboardView_keyTextSize, 18);
             mKeyTextColor = a.getColor(R.styleable.ExtKeyboardView_keyTextColor, 0xFF000000);
@@ -185,7 +189,8 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
         mPaint.setTextAlign(Align.CENTER);
         mPaint.setAlpha(255);
 
-        mKeyBackground.getPadding(mPadding);
+        mKeyBackground.getPadding(mKeyPadding);
+        mLedBackground.getPadding(mLedPadding);
     }
 
     @Override
@@ -279,7 +284,7 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
         return mKeyboard;
     }
 
-    public void setOnKeyboardActionListener(KeyboardView.OnKeyboardActionListener listener) {
+    public void setOnKeyboardActionListener(final KeyboardView.OnKeyboardActionListener listener) {
         mKeyboardActionListener = listener;
     }
 
@@ -319,9 +324,9 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
     }
 
     public void invalidateModifierKeys(final int code) {
-        for (ExtKeyboard.Key key : mKeyboard.getKeysByCode(code)) {
-            invalidateKey(key);
-        }
+        if (mKeyboard != null)
+            for (ExtKeyboard.Key key : mKeyboard.getKeysByCode(code))
+                invalidateKey(key);
     }
 
     /**
@@ -462,7 +467,8 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
             case MotionEvent.ACTION_DOWN: {
                 final int index = event.getActionIndex();
                 final ExtKeyboard.Key key = getKey(event.getX(index), event.getY(index));
-                if (key == null) return super.onTouchEvent(event);
+                if (key == null || key.type != ExtKeyboard.Key.KEY)
+                    return super.onTouchEvent(event);
                 final boolean first = !mTouchedKeys.isPressed(key);
                 mTouchedKeys.put(event.getPointerId(index),
                         key, event.getX(index), event.getY(index));
@@ -608,19 +614,22 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
         final Canvas canvas = mCanvas;
         if (canvas == null) return;
         final Paint paint = mPaint;
-        final Drawable keyBackground = mKeyBackground;
-        final Rect padding = mPadding;
+        final Drawable background = key.type == ExtKeyboard.Key.LED ?
+                mLedBackground : mKeyBackground;
+        final Rect padding = key.type == ExtKeyboard.Key.LED ?
+                mLedPadding : mKeyPadding;
         final int left = getPaddingLeft() + key.x;
         final int top = getPaddingTop() + key.y;
 
         final ExtKeyboard.KeyFcn keyFcn = getKeyFcn(key, mAltKeysFcn);
-        final int[] drawableState = ExtKeyboard.Key.getKeyState(pressed, keyFcn != null && leds.contains(keyFcn.code));
-        keyBackground.setState(drawableState);
+        final int[] drawableState = ExtKeyboard.Key.getKeyState(pressed,
+                keyFcn != null && leds.contains(keyFcn.code));
+        background.setState(drawableState);
 
-        final Rect bounds = keyBackground.getBounds();
+        final Rect bounds = background.getBounds();
         if (key.width != bounds.right ||
                 key.height != bounds.bottom) {
-            keyBackground.setBounds(0, 0, key.width, key.height);
+            background.setBounds(0, 0, key.width, key.height);
         }
 
         canvas.save();
@@ -628,7 +637,7 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
         canvas.translate(left, top);
         canvas.clipRect(0, 0, key.width, key.height);
         getBackground().draw(canvas);
-        keyBackground.draw(canvas);
+        background.draw(canvas);
 
         if (keyFcn == null) {
             canvas.restore();

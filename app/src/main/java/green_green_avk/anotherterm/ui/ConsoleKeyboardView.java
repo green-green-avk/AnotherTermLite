@@ -17,16 +17,21 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 
+import green_green_avk.anotherterm.ConsoleInput;
 import green_green_avk.anotherterm.ConsoleOutput;
 import green_green_avk.anotherterm.R;
 
-public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView.OnKeyboardActionListener {
+public class ConsoleKeyboardView extends ExtKeyboardView implements
+        KeyboardView.OnKeyboardActionListener, ConsoleInput.OnInvalidateSink {
+    protected ConsoleInput consoleInput = null;
     protected ConsoleOutput consoleOutput = null;
 
     protected boolean ctrl = false;
     protected boolean alt = false;
 
     protected boolean wasKey = false;
+
+    protected int keyHeightDp = 0;
 
 //    protected final SpannableStringBuilder softEditable = new SpannableStringBuilder();
 
@@ -75,6 +80,31 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
         applyConfig(getResources().getConfiguration());
     }
 
+    private boolean numLed = false;
+    private boolean capsLed = false;
+    private boolean scrollLed = false;
+
+    @Override
+    public void onInvalidateSink(final Rect rect) {
+        if (consoleInput != null) {
+            if (consoleInput.numLed != numLed) {
+                numLed = consoleInput.numLed;
+                setLedsByCode(KeyEvent.KEYCODE_NUM_LOCK, numLed);
+                invalidateModifierKeys(KeyEvent.KEYCODE_NUM_LOCK);
+            }
+            if (consoleInput.capsLed != capsLed) {
+                capsLed = consoleInput.capsLed;
+                setLedsByCode(KeyEvent.KEYCODE_CAPS_LOCK, capsLed);
+                invalidateModifierKeys(KeyEvent.KEYCODE_CAPS_LOCK);
+            }
+            if (consoleInput.scrollLed != scrollLed) {
+                scrollLed = consoleInput.scrollLed;
+                setLedsByCode(KeyEvent.KEYCODE_SCROLL_LOCK, scrollLed);
+                invalidateModifierKeys(KeyEvent.KEYCODE_SCROLL_LOCK);
+            }
+        }
+    }
+
     private void applyConfig(final Configuration cfg) {
         final Resources res = getContext().getResources();
         final float keyW = cfg.screenWidthDp / cfg.fontScale / 20;
@@ -82,7 +112,9 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
                 keyW >= res.getDimension(R.dimen.kbd_key_size)
                         / res.getDisplayMetrics().scaledDensity
                         ? R.xml.console_keyboard_wide : R.xml.console_keyboard;
-        setKeyboard(new ExtKeyboard(getContext(), kbdRes));
+        final ExtKeyboard.Configuration kc = new ExtKeyboard.Configuration();
+        kc.keyHeight = (int) (keyHeightDp * res.getDisplayMetrics().density);
+        setKeyboard(new ExtKeyboard(getContext(), kbdRes, kc));
         if (cfg.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_YES) {
             showIme(isHidden());
         } else {
@@ -90,17 +122,34 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements KeyboardView
         }
     }
 
-    public void setConsoleOutput(final ConsoleOutput consoleOutput) {
-        this.consoleOutput = consoleOutput;
+    public void setConsoleInput(final ConsoleInput consoleInput) {
+        this.consoleInput = consoleInput;
+        this.consoleOutput = this.consoleInput.consoleOutput;
+        this.consoleInput.addOnInvalidateSink(this);
+        onInvalidateSink(null);
     }
 
-    public void unsetConsoleOutput() {
+    public void unsetConsoleInput() {
+        consoleInput.removeOnInvalidateSink(this);
         consoleOutput = null;
+        consoleInput = null;
     }
 
     @Override
     public boolean getAutoRepeat() {
         return consoleOutput == null || consoleOutput.keyAutorepeat;
+    }
+
+    public int getKeyHeightDp() {
+        return keyHeightDp;
+    }
+
+    public void setKeyHeightDp(final int keyHeight) {
+        if (this.keyHeightDp != keyHeight) {
+            this.keyHeightDp = keyHeight;
+            if (getWindowToken() != null) // if attached
+                applyConfig(getResources().getConfiguration());
+        }
     }
 
     public void clipboardPaste(final String v) {

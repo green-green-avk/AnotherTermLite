@@ -8,8 +8,12 @@ public final class App extends Application {
 
     public static final class Settings extends green_green_avk.anotherterm.utils.Settings {
         @Keep
-        @Param(defRes = R.integer.terminal_font_default_size)
-        public int terminal_font_default_size;
+        @Param(defRes = R.integer.terminal_font_default_size_sp)
+        public int terminal_font_default_size_sp;
+
+        @Keep
+        @Param(defRes = R.integer.terminal_key_height_dp)
+        public int terminal_key_height_dp;
 
         @Keep
         @Param(defRes = R.bool.terminal_key_repeat)

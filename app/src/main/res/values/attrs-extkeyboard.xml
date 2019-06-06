@@ -57,5 +57,10 @@
         <!-- The icon to display on the key instead of the label. -->
         <attr name="keyIcon" format="reference" />
         <attr name="showBothLabels" format="boolean" />
+        <!-- Type -->
+        <attr name="type" format="enum">
+            <enum name="key" value="0" />
+            <enum name="led" value="1" />
+        </attr>
     </declare-styleable>
 </resources>

@@ -43,6 +43,7 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -96,16 +97,6 @@ public class ExtKeyboard {
     private int mDefaultVerticalGap;
 
     /**
-     * Current key width, while loading the keyboard
-     */
-//    private int mKeyWidth;
-
-    /**
-     * Current key height, while loading the keyboard
-     */
-//    private int mKeyHeight;
-
-    /**
      * Total height of the keyboard, including the padding and keys
      */
     private int mTotalHeight;
@@ -135,25 +126,6 @@ public class ExtKeyboard {
      * Height of the screen
      */
     private int mDisplayHeight;
-
-    /**
-     * Keyboard mode, or zero, if none.
-     */
-    private int mKeyboardMode;
-
-    // Variables for pre-computing nearest keys.
-
-    private static final int GRID_WIDTH = 10;
-    private static final int GRID_HEIGHT = 5;
-    private static final int GRID_SIZE = GRID_WIDTH * GRID_HEIGHT;
-    private int mCellWidth;
-    private int mCellHeight;
-    private int[][] mGridNeighbors;
-    private int mProximityThreshold;
-    /**
-     * Number of key widths from current touch point to search for nearest keys.
-     */
-    private static float SEARCH_DISTANCE = 1.8f;
 
     private final ArrayList<Row> rows = new ArrayList<>();
 
@@ -189,37 +161,43 @@ public class ExtKeyboard {
         /**
          * The keyboard mode for this row
          */
-        public int mode;
+        public int mode = 0;
 
         private ExtKeyboard parent;
 
-        public Row(ExtKeyboard parent) {
+        public Row(final ExtKeyboard parent) {
             this.parent = parent;
         }
 
-        public Row(Resources res, ExtKeyboard parent, XmlResourceParser parser) {
+        public Row(final Resources res, final ExtKeyboard parent, final XmlResourceParser parser) {
             this.parent = parent;
             TypedArray a = res.obtainAttributes(Xml.asAttributeSet(parser),
                     R.styleable.ExtKeyboard);
-            defaultWidth = getDimensionOrFraction(a,
-                    R.styleable.ExtKeyboard_keyWidth,
-                    parent.mDisplayWidth, parent.mDefaultWidth);
-            defaultHeight = getDimensionOrFraction(a,
-                    R.styleable.ExtKeyboard_keyHeight,
-                    parent.mDisplayHeight, parent.mDefaultHeight);
-            defaultHorizontalGap = getDimensionOrFraction(a,
-                    R.styleable.ExtKeyboard_horizontalGap,
-                    parent.mDisplayWidth, parent.mDefaultHorizontalGap);
-            verticalGap = getDimensionOrFraction(a,
-                    R.styleable.ExtKeyboard_verticalGap,
-                    parent.mDisplayHeight, parent.mDefaultVerticalGap);
-            a.recycle();
+            try {
+                defaultWidth = getDimensionOrFraction(a,
+                        R.styleable.ExtKeyboard_keyWidth,
+                        parent.mDisplayWidth, parent.mDefaultWidth);
+                defaultHeight = getDimensionOrFraction(a,
+                        R.styleable.ExtKeyboard_keyHeight,
+                        parent.mDisplayHeight, parent.mDefaultHeight);
+                defaultHorizontalGap = getDimensionOrFraction(a,
+                        R.styleable.ExtKeyboard_horizontalGap,
+                        parent.mDisplayWidth, parent.mDefaultHorizontalGap);
+                verticalGap = getDimensionOrFraction(a,
+                        R.styleable.ExtKeyboard_verticalGap,
+                        parent.mDisplayHeight, parent.mDefaultVerticalGap);
+            } finally {
+                a.recycle();
+            }
             a = res.obtainAttributes(Xml.asAttributeSet(parser),
                     R.styleable.ExtKeyboard_Row);
-            rowEdgeFlags = a.getInt(R.styleable.ExtKeyboard_Row_rowEdgeFlags, 0);
-            mode = a.getResourceId(R.styleable.ExtKeyboard_Row_keyboardMode,
-                    0);
-            a.recycle();
+            try {
+                rowEdgeFlags = a.getInt(R.styleable.ExtKeyboard_Row_rowEdgeFlags, 0);
+                mode = a.getResourceId(R.styleable.ExtKeyboard_Row_keyboardMode,
+                        0);
+            } finally {
+                a.recycle();
+            }
         }
     }
 
@@ -227,12 +205,19 @@ public class ExtKeyboard {
      * Class for describing the position and characteristics of a single key in the keyboard.
      */
     public static class Key {
+        public static final int KEY = 0;
+        public static final int LED = 1;
+
         /**
          * All the key codes (unicode or custom code) and labels
          * that this key could generate, zero'th
          * being the most important.
          */
         public final List<KeyFcn> functions = new ArrayList<>();
+        /**
+         * Type: can be KEY or LED now
+         */
+        public int type = KEY;
         /**
          * Width of the key, not including the gap
          */
@@ -319,14 +304,14 @@ public class ExtKeyboard {
                 {android.R.attr.state_checked, android.R.attr.state_pressed}
         };
 
-        public static int[] getKeyState(boolean pressed, boolean on) {
+        public static int[] getKeyState(final boolean pressed, final boolean on) {
             return KEY_STATES[(pressed ? 1 : 0) | (on ? 2 : 0)];
         }
 
         /**
          * Create an empty key with no attributes.
          */
-        public Key(Row parent) {
+        public Key(final Row parent) {
             keyboard = parent.parent;
             height = parent.defaultHeight;
             width = parent.defaultWidth;
@@ -345,7 +330,9 @@ public class ExtKeyboard {
          * @param y      the y coordinate of the top-left
          * @param parser the XML parser containing the attributes for this key
          */
-        public Key(Resources res, Row parent, int x, int y, XmlResourceParser parser) {
+        public Key(@NonNull final Resources res, @NonNull final Row parent,
+                   final int x, final int y,
+                   @NonNull final XmlResourceParser parser) {
             this(parent);
 
             this.x = x;
@@ -372,7 +359,8 @@ public class ExtKeyboard {
             try {
                 this.x += gap;
 
-                int code = a.getInt(
+                type = a.getInt(R.styleable.ExtKeyboard_Key_type, KEY);
+                final int code = a.getInt(
                         R.styleable.ExtKeyboard_Key_code, KEYCODE_NONE);
                 popupResId = a.getResourceId(
                         R.styleable.ExtKeyboard_Key_popupKeyboard, 0);
@@ -382,16 +370,25 @@ public class ExtKeyboard {
                         R.styleable.ExtKeyboard_Key_isRepeatable, !modifier);
                 sticky = a.getBoolean(
                         R.styleable.ExtKeyboard_Key_isSticky, false);
-                edgeFlags = a.getInt(R.styleable.ExtKeyboard_Key_keyEdgeFlags, 0);
-                edgeFlags |= parent.rowEdgeFlags;
+                edgeFlags = a.getInt(R.styleable.ExtKeyboard_Key_keyEdgeFlags, parent.rowEdgeFlags);
 
-                Drawable icon = a.getDrawable(
+                final Drawable icon = a.getDrawable(
                         R.styleable.ExtKeyboard_Key_keyIcon);
                 if (icon != null) {
                     icon.setBounds(0, 0, icon.getIntrinsicWidth(), icon.getIntrinsicHeight());
                 }
-                CharSequence label = a.getText(R.styleable.ExtKeyboard_Key_keyLabel);
-                CharSequence text = a.getText(R.styleable.ExtKeyboard_Key_keyOutputText);
+                final CharSequence label = a.getText(R.styleable.ExtKeyboard_Key_keyLabel);
+
+                if (type == LED) {
+                    final KeyFcn fcn = new KeyFcn();
+                    fcn.code = code;
+                    fcn.label = label;
+                    fcn.icon = icon;
+                    functions.add(fcn);
+                    return;
+                }
+
+                final CharSequence text = a.getText(R.styleable.ExtKeyboard_Key_keyOutputText);
 
                 if (code == KEYCODE_NONE && label != null) {
                     for (int i = 0; i < label.length(); ++i) {
@@ -437,14 +434,32 @@ public class ExtKeyboard {
         public CharSequence text = null;
     }
 
+    public static class Configuration {
+        /**
+         * overrides key width of root tag if > 0
+         */
+        public int keyWidth = 0;
+        /**
+         * overrides key height of root tag if > 0
+         */
+        public int keyHeight = 0;
+        /**
+         * Keyboard mode, or zero, if none.
+         */
+        public int keyboardMode = 0;
+    }
+
+    @NonNull
+    protected final Configuration mConfiguration;
+
     /**
      * Creates a keyboard from the given xml key layout file.
      *
      * @param context        the application or service context
      * @param xmlLayoutResId the resource file that contains the keyboard layout and keys.
      */
-    public ExtKeyboard(Context context, @XmlRes int xmlLayoutResId) {
-        this(context, xmlLayoutResId, 0);
+    public ExtKeyboard(@NonNull final Context context, @XmlRes final int xmlLayoutResId) {
+        this(context, xmlLayoutResId, null);
     }
 
     /**
@@ -453,12 +468,13 @@ public class ExtKeyboard {
      *
      * @param context        the application or service context
      * @param xmlLayoutResId the resource file that contains the keyboard layout and keys.
-     * @param modeId         keyboard mode identifier
+     * @param configuration  extra parameters
      * @param width          sets width of keyboard
      * @param height         sets height of keyboard
      */
-    public ExtKeyboard(Context context, @XmlRes int xmlLayoutResId, int modeId, int width,
-                       int height) {
+    public ExtKeyboard(@NonNull final Context context, @XmlRes final int xmlLayoutResId,
+                       @Nullable final Configuration configuration,
+                       final int width, final int height) {
         mDisplayWidth = width;
         mDisplayHeight = height;
 
@@ -466,7 +482,7 @@ public class ExtKeyboard {
         mDefaultWidth = mDisplayWidth / 10;
         mDefaultVerticalGap = 0;
         mDefaultHeight = mDefaultWidth;
-        mKeyboardMode = modeId;
+        mConfiguration = configuration == null ? new Configuration() : configuration;
         loadKeyboard(context, context.getResources().getXml(xmlLayoutResId));
         keyMap.refresh(context);
     }
@@ -477,21 +493,13 @@ public class ExtKeyboard {
      *
      * @param context        the application or service context
      * @param xmlLayoutResId the resource file that contains the keyboard layout and keys.
-     * @param modeId         keyboard mode identifier
+     * @param configuration  extra parameters
      */
-    public ExtKeyboard(Context context, @XmlRes int xmlLayoutResId, int modeId) {
-        final DisplayMetrics dm = context.getResources().getDisplayMetrics();
-        mDisplayWidth = dm.widthPixels;
-        mDisplayHeight = dm.heightPixels;
-        //Log.v(TAG, "keyboard's display metrics:" + dm);
-
-        mDefaultHorizontalGap = 0;
-        mDefaultWidth = mDisplayWidth / 10;
-        mDefaultVerticalGap = 0;
-        mDefaultHeight = mDefaultWidth;
-        mKeyboardMode = modeId;
-        loadKeyboard(context, context.getResources().getXml(xmlLayoutResId));
-        keyMap.refresh(context);
+    public ExtKeyboard(@NonNull final Context context, @XmlRes final int xmlLayoutResId,
+                       @Nullable final Configuration configuration) {
+        this(context, xmlLayoutResId, configuration,
+                context.getResources().getDisplayMetrics().widthPixels,
+                context.getResources().getDisplayMetrics().heightPixels);
     }
 
     /**
@@ -503,15 +511,18 @@ public class ExtKeyboard {
      *
      * @param context             the application or service context
      * @param layoutTemplateResId the layout template file, containing no keys.
+     * @param configuration       extra parameters
      * @param characters          the list of characters to display on the keyboard. One key will be created
      *                            for each character.
      * @param columns             the number of columns of keys to display. If this number is greater than the
      *                            number of keys that can fit in a row, it will be ignored. If this number is -1, the
      *                            keyboard will fit as many keys as possible in each row.
      */
-    public ExtKeyboard(Context context, @XmlRes int layoutTemplateResId,
-                       CharSequence characters, int columns, int horizontalPadding) {
-        this(context, layoutTemplateResId);
+    public ExtKeyboard(@NonNull final Context context, @XmlRes final int layoutTemplateResId,
+                       @Nullable final Configuration configuration,
+                       @NonNull final CharSequence characters, final int columns,
+                       final int horizontalPadding) {
+        this(context, layoutTemplateResId, configuration);
         int x = 0;
         int y = 0;
         int column = 0;
@@ -553,7 +564,7 @@ public class ExtKeyboard {
         keyMap.refresh(context);
     }
 
-    final void resize(@NonNull final Context context, int newWidth, int newHeight) {
+    final void resize(@NonNull final Context context, final int newWidth, final int newHeight) {
         final int numRows = rows.size();
         for (int rowIndex = 0; rowIndex < numRows; ++rowIndex) {
             final Row row = rows.get(rowIndex);
@@ -585,19 +596,22 @@ public class ExtKeyboard {
         keyMap.refresh(context);
     }
 
+    @NonNull
     public List<Key> getKeys() {
         return mKeys;
     }
 
-    public Set<Key> getKeysByCode(int code) {
-        return mKeysByCode.get(code);
+    @NonNull
+    public Set<Key> getKeysByCode(final int code) {
+        final Set<Key> kk = mKeysByCode.get(code);
+        return kk == null ? Collections.<Key>emptySet() : kk;
     }
 
     protected int getHorizontalGap() {
         return mDefaultHorizontalGap;
     }
 
-    protected void setHorizontalGap(int gap) {
+    protected void setHorizontalGap(final int gap) {
         mDefaultHorizontalGap = gap;
     }
 
@@ -605,7 +619,7 @@ public class ExtKeyboard {
         return mDefaultVerticalGap;
     }
 
-    protected void setVerticalGap(int gap) {
+    protected void setVerticalGap(final int gap) {
         mDefaultVerticalGap = gap;
     }
 
@@ -613,7 +627,7 @@ public class ExtKeyboard {
         return mDefaultHeight;
     }
 
-    protected void setKeyHeight(int height) {
+    protected void setKeyHeight(final int height) {
         mDefaultHeight = height;
     }
 
@@ -621,7 +635,7 @@ public class ExtKeyboard {
         return mDefaultWidth;
     }
 
-    protected void setKeyWidth(int width) {
+    protected void setKeyWidth(final int width) {
         mDefaultWidth = width;
     }
 
@@ -670,7 +684,7 @@ public class ExtKeyboard {
             }
             canvas.drawColor(0xFFFFFFFF);
             for (int i = 0; i < mKeys.size(); ++i) {
-                Key k = mKeys.get(i);
+                final Key k = mKeys.get(i);
                 paint.setAlpha(i);
                 canvas.drawRect(k.x, k.y, k.x + k.width, k.y + k.height, paint);
             }
@@ -695,8 +709,8 @@ public class ExtKeyboard {
         return keyMap.get(x, y);
     }
 
-    private void addKeyByCode(Key key) {
-        if (!key.modifier) return;
+    private void addKeyByCode(final Key key) {
+        if (!key.modifier && key.type != Key.LED) return;
         for (KeyFcn fcn : key.functions) {
             if (fcn.code == KEYCODE_NONE) continue;
             Set<Key> keys = mKeysByCode.get(fcn.code);
@@ -708,23 +722,23 @@ public class ExtKeyboard {
         }
     }
 
-    protected Row createRowFromXml(Resources res, XmlResourceParser parser) {
+    protected Row createRowFromXml(final Resources res, final XmlResourceParser parser) {
         return new Row(res, this, parser);
     }
 
-    protected Key createKeyFromXml(Resources res, Row parent, int x, int y,
-                                   XmlResourceParser parser) {
+    protected Key createKeyFromXml(final Resources res, final Row parent, final int x, final int y,
+                                   final XmlResourceParser parser) {
         return new Key(res, parent, x, y, parser);
     }
 
-    private void loadKeyboard(Context context, XmlResourceParser parser) {
+    private void loadKeyboard(final Context context, final XmlResourceParser parser) {
         boolean inKey = false;
         boolean inRow = false;
         int x = 0;
         int y = 0;
         Key key = null;
         Row currentRow = null;
-        Resources res = context.getApplicationContext().getResources();
+        final Resources res = context.getApplicationContext().getResources();
 
         try {
             int event;
@@ -736,11 +750,13 @@ public class ExtKeyboard {
                         x = 0;
                         currentRow = createRowFromXml(res, parser);
                         rows.add(currentRow);
-                        if (currentRow.mode != 0 && currentRow.mode != mKeyboardMode) {
+                        if (currentRow.mode != 0 &&
+                                currentRow.mode != mConfiguration.keyboardMode) {
                             skipToEndOfRow(parser);
                             inRow = false;
                         }
                     } else if (TAG_KEY.equals(tag)) {
+                        if (!inRow) throw new XmlPullParserException("A key not in a row");
                         inKey = true;
                         key = createKeyFromXml(res, currentRow, x, y, parser);
                         mKeys.add(key);
@@ -765,14 +781,14 @@ public class ExtKeyboard {
                     }
                 }
             }
-        } catch (Exception e) {
+        } catch (final Exception e) {
             Log.e(TAG, "Parse error:" + e);
             e.printStackTrace();
         }
         mTotalHeight = y - mDefaultVerticalGap;
     }
 
-    private void skipToEndOfRow(XmlResourceParser parser)
+    private void skipToEndOfRow(final XmlResourceParser parser)
             throws XmlPullParserException, IOException {
         int event;
         while ((event = parser.next()) != XmlResourceParser.END_DOCUMENT) {
@@ -783,28 +799,31 @@ public class ExtKeyboard {
         }
     }
 
-    private void parseKeyboardAttributes(Resources res, XmlResourceParser parser) {
-        TypedArray a = res.obtainAttributes(Xml.asAttributeSet(parser),
+    private void parseKeyboardAttributes(final Resources res, final XmlResourceParser parser) {
+        final TypedArray a = res.obtainAttributes(Xml.asAttributeSet(parser),
                 R.styleable.ExtKeyboard);
-
-        mDefaultWidth = getDimensionOrFraction(a,
-                R.styleable.ExtKeyboard_keyWidth,
-                mDisplayWidth, mDisplayWidth / 10);
-        mDefaultHeight = getDimensionOrFraction(a,
-                R.styleable.ExtKeyboard_keyHeight,
-                mDisplayHeight, 50);
-        mDefaultHorizontalGap = getDimensionOrFraction(a,
-                R.styleable.ExtKeyboard_horizontalGap,
-                mDisplayWidth, 0);
-        mDefaultVerticalGap = getDimensionOrFraction(a,
-                R.styleable.ExtKeyboard_verticalGap,
-                mDisplayHeight, 0);
-        mProximityThreshold = (int) (mDefaultWidth * SEARCH_DISTANCE);
-        mProximityThreshold = mProximityThreshold * mProximityThreshold; // Square it for comparison
-        a.recycle();
+        try {
+            mDefaultWidth = mConfiguration.keyWidth > 0 ? mConfiguration.keyWidth :
+                    getDimensionOrFraction(a,
+                            R.styleable.ExtKeyboard_keyWidth,
+                            mDisplayWidth, mDisplayWidth / 10);
+            mDefaultHeight = mConfiguration.keyHeight > 0 ? mConfiguration.keyHeight :
+                    getDimensionOrFraction(a,
+                            R.styleable.ExtKeyboard_keyHeight,
+                            mDisplayHeight, 50);
+            mDefaultHorizontalGap = getDimensionOrFraction(a,
+                    R.styleable.ExtKeyboard_horizontalGap,
+                    mDisplayWidth, 0);
+            mDefaultVerticalGap = getDimensionOrFraction(a,
+                    R.styleable.ExtKeyboard_verticalGap,
+                    mDisplayHeight, 0);
+        } finally {
+            a.recycle();
+        }
     }
 
-    static int getDimensionOrFraction(TypedArray a, int index, int base, int defValue) {
+    private static int getDimensionOrFraction(final TypedArray a, final int index, final int base,
+                                              final int defValue) {
         TypedValue value = a.peekValue(index);
         if (value == null) return defValue;
         if (value.type == TypedValue.TYPE_DIMENSION) {

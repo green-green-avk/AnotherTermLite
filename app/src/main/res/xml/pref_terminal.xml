@@ -5,7 +5,7 @@
     <PreferenceCategory android:title="Font">
 
         <com.pavelsikun.seekbarpreference.SeekBarPreferenceCompat
-            android:defaultValue="@integer/terminal_font_default_size"
+            android:defaultValue="@integer/terminal_font_default_size_sp"
             android:key="terminal_font_default_size"
             android:title="Default Size"
             app:msbp_dialogEnabled="true"
@@ -13,6 +13,18 @@
             app:msbp_maxValue="32"
             app:msbp_measurementUnit="@string/unit_sp"
             app:msbp_minValue="4" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Screen Keyboard">
+        <com.pavelsikun.seekbarpreference.SeekBarPreferenceCompat
+            android:defaultValue="@integer/terminal_key_height_dp"
+            android:key="terminal_key_height_dp"
+            android:title="Key height"
+            app:msbp_dialogEnabled="true"
+            app:msbp_interval="1"
+            app:msbp_maxValue="64"
+            app:msbp_measurementUnit="@string/unit_dp"
+            app:msbp_minValue="16" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Screen keyboard key repeat">

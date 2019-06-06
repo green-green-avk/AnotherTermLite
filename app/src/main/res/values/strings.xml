@@ -97,6 +97,7 @@
     <string name="key_map">Key Map</string>
     <string name="unit_ms">ms</string>
     <string name="unit_sp">sp</string>
+    <string name="unit_dp">dp</string>
     <string name="action_settings_terminal">Terminal</string>
     <string name="msg_cannot_parse_uri">Cannot parse URI</string>
     <string name="msg_nothing_to_copy_to_clipboard">Nothing to copy to clipboard</string>

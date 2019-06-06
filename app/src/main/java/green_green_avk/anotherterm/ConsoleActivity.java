@@ -134,7 +134,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
         mCsv.setFont(FontsManager.consoleTypefaces);
         mCkv.setFont(FontsManager.consoleTypefaces); // Old Android devices have no glyphs for some special symbols
 
-        mCsv.setFontSize(((App) getApplication()).settings.terminal_font_default_size
+        mCsv.setFontSize(((App) getApplication()).settings.terminal_font_default_size_sp
                 * getResources().getDisplayMetrics().scaledDensity);
 
         mGestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
@@ -196,7 +196,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
         mSession.uiState.csv.apply(mCsv);
 
         mCsv.setConsoleInput(mSession.input);
-        mCkv.setConsoleOutput(mSession.output);
+        mCkv.setConsoleInput(mSession.input);
         mSession.input.addOnInvalidateSink(this);
     }
 
@@ -216,6 +216,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
         mCkv.setAutoRepeatAllowed(((App) getApplication()).settings.terminal_key_repeat);
         mCkv.setAutoRepeatDelay(((App) getApplication()).settings.terminal_key_repeat_delay);
         mCkv.setAutoRepeatInterval(((App) getApplication()).settings.terminal_key_repeat_interval);
+        mCkv.setKeyHeightDp(((App) getApplication()).settings.terminal_key_height_dp);
         ((BackendUiInteractionActivityCtx) mSession.backend.wrapped.getUi()).setActivity(this);
     }
 

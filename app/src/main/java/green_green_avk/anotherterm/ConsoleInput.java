@@ -51,6 +51,10 @@ public final class ConsoleInput implements BytesSink {
     private final char[][] mSavedDecGxCharsets = new char[][]{null, null, null, null};
     private int mSavedDecGlCharset = 0;
 
+    public boolean numLed = false;
+    public boolean capsLed = false;
+    public boolean scrollLed = false;
+
     private void sendBack(final String v) {
         if (consoleOutput != null)
             consoleOutput.feed(v);
@@ -462,12 +466,7 @@ public final class ConsoleInput implements BytesSink {
                             return;
                         }
                         while (i < csi.args.length) {
-                            int a;
-                            try {
-                                a = Integer.parseInt(csi.args[i++]);
-                            } catch (final NumberFormatException e) {
-                                a = 0;
-                            }
+                            final int a = csi.getIntArg(i++, 0);
                             switch (a) {
                                 case 0:
                                     aa.reset();
@@ -559,6 +558,35 @@ public final class ConsoleInput implements BytesSink {
                                 return;
                         }
                         break;
+                    }
+                    case 'q': { // DECLL
+                        for (int i = 0; i < csi.args.length; ++i)
+                            switch (csi.getIntArg(i, 0)) {
+                                case 0:
+                                    numLed = false;
+                                    capsLed = false;
+                                    scrollLed = false;
+                                    break;
+                                case 1:
+                                    numLed = true;
+                                    break;
+                                case 2:
+                                    capsLed = true;
+                                    break;
+                                case 3:
+                                    scrollLed = true;
+                                    break;
+                                case 21:
+                                    numLed = false;
+                                    break;
+                                case 22:
+                                    capsLed = false;
+                                    break;
+                                case 23:
+                                    scrollLed = false;
+                                    break;
+                            }
+                        return;
                     }
                     case 'r':
                         if (csi.args.length == 2)

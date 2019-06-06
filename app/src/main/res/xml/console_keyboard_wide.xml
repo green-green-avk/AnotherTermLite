@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Keyboard xmlns:app="http://schemas.android.com/apk/res-auto"
-    app:keyWidth="5%p"
-    app:keyHeight="@dimen/kbd_key_size"
     app:horizontalGap="0dp"
+    app:keyHeight="@dimen/kbd_key_size"
+    app:keyWidth="5%p"
     app:verticalGap="0dp">
 
     <Row
-        app:verticalGap="2dp"
-        app:keyWidth="7%p">
+        app:keyWidth="7.14%p"
+        app:verticalGap="2dp">
         <Key
             app:code="111"
             app:keyLabel="Esc" />
         <Key
             app:code="131"
-            app:keyLabel="F1"
-            app:horizontalGap="7%p" />
+            app:horizontalGap="7.14%p"
+            app:keyLabel="F1" />
         <Key
             app:code="132"
             app:keyLabel="F2" />
@@ -70,8 +70,8 @@
             app:keyWidth="10%p" /><!-- BS -->
         <Key
             app:code="124"
-            app:keyLabel="Ins"
-            app:horizontalGap="5%p" />
+            app:horizontalGap="5%p"
+            app:keyLabel="Ins" />
         <Key
             app:code="122"
             app:keyLabel="Home" />
@@ -102,8 +102,8 @@
             app:keyWidth="7.5%p" />
         <Key
             app:code="112"
-            app:keyLabel="Del"
-            app:horizontalGap="5%p" />
+            app:horizontalGap="5%p"
+            app:keyLabel="Del" />
         <Key
             app:code="123"
             app:keyLabel="End" />
@@ -114,8 +114,23 @@
 
     <Row>
         <Key
-            app:keyLabel="aA"
-            app:horizontalGap="10%p" />
+            app:code="143"
+            app:keyLabel="N"
+            app:keyWidth="3.3%p"
+            app:type="led" />
+        <Key
+            app:code="115"
+            app:keyLabel="C"
+            app:keyWidth="3.3%p"
+            app:type="led" />
+        <Key
+            app:code="116"
+            app:keyLabel="S"
+            app:keyWidth="3.3%p"
+            app:type="led" />
+        <Key
+            app:horizontalGap="0.1%p"
+            app:keyLabel="aA" />
         <Key app:keyLabel="sS" />
         <Key app:keyLabel="dD" />
         <Key app:keyLabel="fF" />
@@ -135,9 +150,9 @@
     <Row>
         <Key
             app:code="59"
+            app:isModifier="true"
             app:keyLabel="&#x21EB;"
-            app:keyWidth="12.5%p"
-            app:isModifier="true" /><!-- Shift -->
+            app:keyWidth="12.5%p" /><!-- Shift -->
         <Key app:keyLabel="zZ" />
         <Key app:keyLabel="xX" />
         <Key app:keyLabel="cC" />
@@ -150,44 +165,44 @@
         <Key app:keyLabel="/?" />
         <Key
             app:code="59"
+            app:isModifier="true"
             app:keyLabel="&#x21EB;"
-            app:keyWidth="12.5%p"
-            app:isModifier="true" /><!-- Shift -->
+            app:keyWidth="12.5%p" /><!-- Shift -->
         <Key
             app:code="19"
-            app:keyLabel="&#x2191;"
-            app:horizontalGap="10%p" /><!-- Up -->
+            app:horizontalGap="10%p"
+            app:keyLabel="&#x2191;" /><!-- Up -->
     </Row>
 
     <Row>
         <Key
             app:code="113"
+            app:isModifier="true"
             app:keyLabel="Ctrl"
-            app:keyWidth="10%p"
-            app:isModifier="true" />
+            app:keyWidth="10%p" />
         <Key
             app:code="57"
+            app:isModifier="true"
             app:keyLabel="Alt"
-            app:keyWidth="10%p"
-            app:isModifier="true" />
+            app:keyWidth="10%p" />
         <Key
             app:code="62"
             app:keyLabel="&#x2423;"
             app:keyWidth="35%p" /><!-- Space -->
         <Key
             app:code="57"
+            app:isModifier="true"
             app:keyLabel="Alt"
-            app:keyWidth="10%p"
-            app:isModifier="true" />
+            app:keyWidth="10%p" />
         <Key
             app:code="113"
+            app:isModifier="true"
             app:keyLabel="Ctrl"
-            app:keyWidth="10%p"
-            app:isModifier="true" />
+            app:keyWidth="10%p" />
         <Key
             app:code="21"
-            app:keyLabel="&#x2190;"
-            app:horizontalGap="5%p" /><!-- Left -->
+            app:horizontalGap="5%p"
+            app:keyLabel="&#x2190;" /><!-- Left -->
         <Key
             app:code="20"
             app:keyLabel="&#x2193;" /><!-- Down -->

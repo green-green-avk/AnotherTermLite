@@ -62,6 +62,7 @@
         app:autoRepeatDelay="1000"
         app:keyBackground="@drawable/bg_key1"
         app:keyTextColor="@color/colorAccent"
+        app:ledBackground="@drawable/bg_led1"
         app:popupBackground="@drawable/bg_popup"
         app:popupDelay="100"
         app:popupKeyBackground="@drawable/bg_popup_key"
