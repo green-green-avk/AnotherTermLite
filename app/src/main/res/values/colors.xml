@@ -8,4 +8,5 @@
     <color name="colorHintWarning">#7F0000</color>
     <color name="colorGlow">#FFFFFF</color>
     <color name="colorShadow">#000000</color>
+    <color name="colorMiddle">#7F7F7F</color>
 </resources>

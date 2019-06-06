@@ -5,11 +5,15 @@
         <attr name="selectionMarker" format="reference" />
         <attr name="paddingMarkup" format="reference" />
         <attr name="paddingMarkupAlpha" format="float" />
+        <attr name="attrMarkupBlinking" format="reference" />
+        <attr name="attrMarkupAlpha" format="float" />
     </declare-styleable>
 
     <style name="AppConsoleScreenViewStyle" parent="AppExtKeyboardViewStyle">
         <item name="selectionMarker">@drawable/ic_select_cursor</item>
         <item name="paddingMarkup">@drawable/bg_padding1_tiles</item>
         <item name="paddingMarkupAlpha">0.2</item>
+        <item name="attrMarkupBlinking">@drawable/bg_attr_blinking_tiles</item>
+        <item name="attrMarkupAlpha">0.7</item>
     </style>
 </resources>

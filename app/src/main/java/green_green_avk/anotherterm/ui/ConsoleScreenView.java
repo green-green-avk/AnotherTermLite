@@ -64,8 +64,9 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     protected final Paint bgPaint = new Paint();
     protected final Paint cursorPaint = new Paint();
     protected final Paint selectionPaint = new Paint();
-    protected final Paint markupPaint = new Paint();
+    protected final Paint paddingMarkupPaint = new Paint();
     protected Drawable selectionMarkerPtr = null;
+    protected Drawable attrMarkupBlinking = null;
     protected Drawable paddingMarkup = null;
     protected Typeface[] typefaces = {
             Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL),
@@ -106,6 +107,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
 
     protected void init(final Context context, final AttributeSet attrs,
                         final int defStyleAttr, final int defStyleRes) {
+        final int attrMarkupAlpha;
         final int paddingMarkupAlpha;
         final TypedArray a = context.obtainStyledAttributes(
                 attrs, R.styleable.ConsoleScreenView, defStyleAttr, defStyleRes);
@@ -113,6 +115,10 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
 //            selectionMarkerPtr = a.getDrawable(R.styleable.ConsoleScreenView_selectionMarker);
             selectionMarkerPtr = AppCompatResources.getDrawable(context,
                     a.getResourceId(R.styleable.ConsoleScreenView_selectionMarker, 0));
+            attrMarkupBlinking = AppCompatResources.getDrawable(context,
+                    a.getResourceId(R.styleable.ConsoleScreenView_attrMarkupBlinking, 0));
+            attrMarkupAlpha = (int) (a.getFloat(R.styleable.ConsoleScreenView_attrMarkupAlpha,
+                    0.5f) * 255);
             paddingMarkup = AppCompatResources.getDrawable(context,
                     a.getResourceId(R.styleable.ConsoleScreenView_paddingMarkup, 0));
             paddingMarkupAlpha = (int) (a.getFloat(R.styleable.ConsoleScreenView_paddingMarkupAlpha,
@@ -121,16 +127,18 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
             a.recycle();
         }
 
+        attrMarkupBlinking.setAlpha(attrMarkupAlpha);
         paddingMarkup.setAlpha(paddingMarkupAlpha);
 
         cursorPaint.setColor(Color.argb(127, 255, 255, 255));
         cursorPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SCREEN));
         selectionPaint.setColor(Color.argb(127, 0, 255, 0));
         selectionPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SCREEN));
-        markupPaint.setColor(getResources().getColor(R.color.colorPrimary));
-        markupPaint.setStyle(Paint.Style.STROKE);
-        markupPaint.setAlpha(paddingMarkupAlpha);
-        markupPaint.setPathEffect(new DashPathEffect(new float[]{10, 20}, 0));
+        paddingMarkupPaint.setColor(getResources().getColor(R.color.colorMiddle));
+        paddingMarkupPaint.setStrokeWidth(3);
+        paddingMarkupPaint.setStyle(Paint.Style.STROKE);
+        paddingMarkupPaint.setAlpha(paddingMarkupAlpha);
+        paddingMarkupPaint.setPathEffect(new DashPathEffect(new float[]{10, 20}, 0));
         if (Build.VERSION.SDK_INT >= 21) {
             // At least, devices with Android 4.4.2 can have monospace font width glitches with these settings.
             fgPaint.setHinting(Paint.HINTING_ON);
@@ -633,7 +641,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
             for (int j = rect.top; j < rect.bottom; j++) {
                 final float strTop = getBufferDrawPosYF(j);
                 final float strBottom = getBufferDrawPosYF(j + 1)
-                        + 0.5f; // fix for old phones rendering glitch
+                        + 1; // fix for old phones rendering glitch
                 int i = rect.left;
                 while (i < rect.right) {
                     final float strFragLeft = getBufferDrawPosXF(i);
@@ -643,10 +651,14 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
                             consoleInput.currScrBuf.getCharsSameAttr(i, j, rect.right);
                     if (s == null) {
                         canvas.drawRect(strFragLeft, strTop, getWidth(), strBottom, bgPaint);
+                        if (charAttrs.blinking) drawDrawable(canvas, attrMarkupBlinking,
+                                (int) strFragLeft, (int) strTop, getWidth(), (int) strBottom);
                         break;
                     }
                     final float strFragRight = getBufferDrawPosXF(i + s.length());
                     canvas.drawRect(strFragLeft, strTop, strFragRight, strBottom, bgPaint);
+                    if (charAttrs.blinking) drawDrawable(canvas, attrMarkupBlinking,
+                            (int) strFragLeft, (int) strTop, (int) strFragRight, (int) strBottom);
                     if (!isAllSpaces(s))
                         canvas.drawText(s, 0, s.length(),
                                 strFragLeft, strTop - fgPaint.ascent(), fgPaint);
@@ -661,9 +673,9 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
                     drawDrawable(canvas, paddingMarkup, (int) hDiv, 0,
                             getWidth(), Math.min(getHeight(), (int) vDivBottom));
             }
-            canvas.drawLine(0, vDivBottom, getWidth(), vDivBottom, markupPaint);
-            canvas.drawLine(0, vDivBuf, getWidth(), vDivBuf, markupPaint);
-            canvas.drawLine(hDiv, 0, hDiv, getHeight(), markupPaint);
+            canvas.drawLine(0, vDivBottom, getWidth(), vDivBottom, paddingMarkupPaint);
+            canvas.drawLine(0, vDivBuf, getWidth(), vDivBuf, paddingMarkupPaint);
+            canvas.drawLine(hDiv, 0, hDiv, getHeight(), paddingMarkupPaint);
             if (selectionMode && selection != null) {
                 final int selH = Math.abs(selection.last.y - selection.first.y) + 1;
                 if (selH == 1 || selection.isRectangular) {
