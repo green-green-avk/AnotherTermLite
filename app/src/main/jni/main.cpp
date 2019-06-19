@@ -173,6 +173,23 @@ static void _onSignalExit(int s) {
 #define CMD_EXIT 0
 #define CMD_OPEN 1
 
+/*
+ * It seems, tty descriptors cannot be passed via local domain sockets if O_APPEND is set.
+ * GNU Make sets O_APPEND onto stdout, so trying not to break it but resolve it...
+ * It seems, we can't just dup() here: O_APPEND is shared by all the duplicated descriptors
+ * in all processes...
+ * TODO: review this hack
+ */
+static int fixFd(const int fd) {
+    const int ff = fcntl(fd, F_GETFL);
+    if ((ff & O_APPEND) && isatty(fd)) {
+        char fn[PATH_MAX];
+        snprintf(fn, sizeof(fn), "/proc/self/fd/%u", fd);
+        return open(fn, O_RDWR);
+    }
+    return fd;
+}
+
 int main(const int argc, const char *const *const argv) {
     options_t options = {.raw = false};
 
@@ -254,13 +271,13 @@ int main(const int argc, const char *const *const argv) {
         perror("Error creating control pipe");
         exit(1);
     }
-    const int fds[] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO, ctlFds[0]};
-    const char _argc = (char) c_argc;
-    sendFdsOrExit(sock, &_argc, 1, fds, sizeof(fds) / sizeof(fds[0]));
+    const int fds[] = {fixFd(STDIN_FILENO), fixFd(STDOUT_FILENO), fixFd(STDERR_FILENO), ctlFds[0]};
+    const int8_t _argc = (char) c_argc;
+    sendFdsOrExit(sock, &_argc, sizeof(_argc), fds, sizeof(fds) / sizeof(fds[0]));
     for (int i = 0; i < c_argc; ++i) {
         const size_t l = strlen(c_argv[i]);
         const uint32_t _l = htonl(l); // always big-endian
-        writeAllOrExit(sock, &_l, 4);
+        writeAllOrExit(sock, &_l, sizeof(_l));
         writeAllOrExit(sock, c_argv[i], l);
     }
     close(ctlFds[0]);
