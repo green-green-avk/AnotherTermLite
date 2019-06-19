@@ -70,7 +70,7 @@ static ssize_t sendFds(const int sockfd, const void *const data, const size_t le
     }
     alignas(struct cmsghdr) char cmsg_buf[cmsg_space];
     iovec iov = {.iov_base = const_cast<void *>(data), .iov_len = len};
-    msghdr msg = {
+    const msghdr msg = {
             .msg_name = nullptr,
             .msg_namelen = 0,
             .msg_iov = &iov,
@@ -80,18 +80,18 @@ static ssize_t sendFds(const int sockfd, const void *const data, const size_t le
             .msg_controllen = static_cast<unsigned int>(cmsg_space),
             .msg_flags = 0,
     };
-    struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+    struct cmsghdr *const cmsg = CMSG_FIRSTHDR(&msg);
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
     cmsg->cmsg_len = cmsg_len;
-    int *cmsg_fds = reinterpret_cast<int *>(CMSG_DATA(cmsg));
+    int *const cmsg_fds = reinterpret_cast<int *>(CMSG_DATA(cmsg));
     for (size_t i = 0; i < fdsc; ++i) {
         cmsg_fds[i] = fds[i];
     }
 #if defined(__linux__)
-    int flags = MSG_NOSIGNAL;
+    const int flags = MSG_NOSIGNAL;
 #else
-    int flags = 0;
+    const int flags = 0;
 #endif
     return TEMP_FAILURE_RETRY(sendmsg(sockfd, &msg, flags));
 }
@@ -116,7 +116,7 @@ static void writeAllOrExit(const int sock, const void *const buf, const size_t l
         const ssize_t r = write(sock, (char *) buf + offset, len - offset);
         if (r <= 0) {
             close(sock);
-            perror("Error sending data from termsh server");
+            perror("Error sending data to termsh server");
             exit(1);
         }
         offset += r;
@@ -129,7 +129,7 @@ static void sendFdsOrExit(const int sock, const void *const buf, const size_t le
     const ssize_t r = sendFds(sock, buf, len, fds, fdsc);
     if (r <= 0) {
         close(sock);
-        perror("Error sending data from termsh server");
+        perror("Error sending data with fds to termsh server");
         exit(1);
     }
 }

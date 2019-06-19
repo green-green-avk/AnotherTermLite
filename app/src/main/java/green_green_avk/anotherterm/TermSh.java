@@ -947,7 +947,7 @@ public final class TermSh {
             }
             try {
                 serverSocket.close();
-            } catch (IOException ignored) {
+            } catch (final IOException ignored) {
             }
         }
     }
