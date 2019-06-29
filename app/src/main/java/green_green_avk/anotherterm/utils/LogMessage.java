@@ -6,7 +6,7 @@ public class LogMessage {
     public final String msg;
     public final Date timestamp;
 
-    public LogMessage(String msg) {
+    public LogMessage(final String msg) {
         this.msg = msg;
         timestamp = new Date();
     }

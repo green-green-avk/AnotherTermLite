@@ -28,11 +28,11 @@ public final class SharedPreferencesSet {
     private final Set<Runnable> onChangeListeners =
             Collections.newSetFromMap(new WeakHashMap<Runnable, Boolean>());
 
-    private static String encKey(String v) {
+    private static String encKey(final String v) {
         return URLEncoder.encode(v);
     }
 
-    private static String decKey(String ev) {
+    private static String decKey(final String ev) {
         return URLDecoder.decode(ev);
     }
 
@@ -42,12 +42,12 @@ public final class SharedPreferencesSet {
     }
 
     @NonNull
-    private String getName(String key) {
+    private String getName(final String key) {
         return prefix + encKey(key);
     }
 
     @NonNull
-    private String getFileName(String key) {
+    private String getFileName(final String key) {
         return getName(key) + ".xml";
     }
 
@@ -117,7 +117,7 @@ public final class SharedPreferencesSet {
     }
 
     @MainThread
-    public void move(@NonNull String from, @NonNull String to) {
+    public void move(@NonNull final String from, @NonNull final String to) {
         // We cannot rely on files consistency
         copy(from, to);
         remove(from);
@@ -125,7 +125,7 @@ public final class SharedPreferencesSet {
     }
 
     @MainThread
-    public void copy(@NonNull String from, @NonNull String to) {
+    public void copy(@NonNull final String from, @NonNull final String to) {
         // We cannot rely on files consistency
         final SharedPreferences spFrom = peek(from);
         final SharedPreferences.Editor spEdTo = peek(to).edit();

@@ -22,16 +22,18 @@ public abstract class Settings {
         @AnyRes int defRes() default 0;
     }
 
-    protected SharedPreferences.OnSharedPreferenceChangeListener onChange = new SharedPreferences.OnSharedPreferenceChangeListener() {
-        @Override
-        public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-            try {
-                set(key, sharedPreferences, get(key));
-            } catch (NoSuchElementException ignored) {
-            } catch (IllegalArgumentException ignored) {
-            }
-        }
-    };
+    protected SharedPreferences.OnSharedPreferenceChangeListener onChange =
+            new SharedPreferences.OnSharedPreferenceChangeListener() {
+                @Override
+                public void onSharedPreferenceChanged(final SharedPreferences sharedPreferences,
+                                                      final String key) {
+                    try {
+                        set(key, sharedPreferences, get(key));
+                    } catch (final NoSuchElementException ignored) {
+                    } catch (final IllegalArgumentException ignored) {
+                    }
+                }
+            };
 
     public void init(@NonNull final Context ctx, @NonNull final SharedPreferences sp) {
         final SharedPreferences.Editor editor = sp.edit(); // for repair
@@ -43,7 +45,7 @@ public abstract class Settings {
             Object v;
             try {
                 v = f.get(this);
-            } catch (IllegalAccessException e) {
+            } catch (final IllegalAccessException e) {
                 continue;
             }
             final Class c = f.getType();
@@ -74,7 +76,7 @@ public abstract class Settings {
             } else continue;
             try {
                 f.set(this, v);
-            } catch (IllegalAccessException ignored) {
+            } catch (final IllegalAccessException ignored) {
             }
         }
         editor.apply();
@@ -85,13 +87,13 @@ public abstract class Settings {
         final Field f;
         try {
             f = getClass().getField(k);
-        } catch (NoSuchFieldException e) {
+        } catch (final NoSuchFieldException e) {
             throw new NoSuchElementException();
         }
         if (f.getAnnotation(Param.class) == null) return null;
         try {
             return f.get(this);
-        } catch (IllegalAccessException e) {
+        } catch (final IllegalAccessException e) {
             throw new NoSuchElementException();
         }
     }
@@ -106,16 +108,17 @@ public abstract class Settings {
         if (f.getAnnotation(Param.class) == null) throw new NoSuchElementException();
         try {
             f.set(this, v);
-        } catch (IllegalAccessException e) {
+        } catch (final IllegalAccessException e) {
             throw new NoSuchElementException();
         }
     }
 
-    public void set(@NonNull final String k, @NonNull final SharedPreferences sp, @Nullable final Object dv) {
+    public void set(@NonNull final String k, @NonNull final SharedPreferences sp,
+                    @Nullable final Object dv) {
         final Field f;
         try {
             f = getClass().getField(k);
-        } catch (NoSuchFieldException e) {
+        } catch (final NoSuchFieldException e) {
             throw new NoSuchElementException();
         }
         if (f.getAnnotation(Param.class) == null) throw new NoSuchElementException();
@@ -131,12 +134,12 @@ public abstract class Settings {
             } else {
                 throw new UnsupportedOperationException();
             }
-        } catch (ClassCastException e) {
+        } catch (final ClassCastException e) {
             throw new IllegalArgumentException("Wrong field type");
         }
         try {
             f.set(this, v);
-        } catch (IllegalAccessException e) {
+        } catch (final IllegalAccessException e) {
             throw new NoSuchElementException();
         }
     }
