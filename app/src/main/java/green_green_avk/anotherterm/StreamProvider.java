@@ -20,7 +20,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 public final class StreamProvider extends ContentProvider {
@@ -85,27 +88,49 @@ public final class StreamProvider extends ContentProvider {
         }
     }
 
+    @NonNull
+    private static Uri getUriById(final int id) {
+        return Uri.parse("content://" + instance.authority + "/stream/" + id);
+    }
+
     private static int getId(@NonNull final Uri uri) {
         final String id = uri.getLastPathSegment();
         if (id == null) throw new NumberFormatException("null");
         return Integer.parseInt(id);
     }
 
+    private static void checkState() {
+        if (instance == null) throw new IllegalStateException("Stream Provider is not ready");
+    }
+
     @NonNull
     public static Uri obtainUri(@NonNull final InputStream inputStream, @NonNull final String mime,
                                 @Nullable final String name, @Nullable final Integer size,
                                 @Nullable final OnResult onResult) {
-        if (instance == null) throw new IllegalStateException("Stream Provider is not ready");
+        checkState();
         final int id = instance.putStream(inputStream, mime, name, size, onResult);
-        return Uri.parse("content://" + instance.authority + "/stream/" + id);
+        return getUriById(id);
     }
 
     public static void releaseUri(@NonNull final Uri uri) {
-        if (instance == null) throw new IllegalStateException("Stream Provider is not ready");
+        checkState();
         try {
             instance.removeStream(getId(uri));
         } catch (final NumberFormatException ignored) {
         }
+    }
+
+    @NonNull
+    public static Set<Uri> getBoundUriList() {
+        checkState();
+        final HashSet<Uri> r = new HashSet<>();
+        synchronized (instance.stateLock) {
+            if (instance.streams.size() <= 0) return Collections.emptySet();
+            for (int i = 0; i < instance.streams.size(); ++i) {
+                r.add(getUriById(instance.streams.keyAt(i)));
+            }
+        }
+        return Collections.unmodifiableSet(r);
     }
 
     @Override

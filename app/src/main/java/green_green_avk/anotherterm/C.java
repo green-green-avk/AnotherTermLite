@@ -22,5 +22,6 @@ public final class C {
     public static final String TERMSH_USER_TAG = "TERMSH_USER";
     public static final String REQUEST_USER_TAG = "REQUEST_USER";
     public static final String UNNAMED_FILE_NAME = "unnamed";
+    public static final String UNDEFINED_FILE_SIZE = "null";
     public static final List<String> charsetList = new ArrayList<>(Charset.availableCharsets().keySet());
 }

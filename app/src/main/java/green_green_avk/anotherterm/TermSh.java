@@ -141,13 +141,28 @@ public final class TermSh {
                         new BinaryGetOpts.Option("remove", new String[]{"-r", "--remove"},
                                 BinaryGetOpts.Option.Type.NONE)
                 });
+        private static final BinaryGetOpts.Options URI_OPTS =
+                new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
+                        new BinaryGetOpts.Option("close", new String[]{"-c", "--close-stream"},
+                                BinaryGetOpts.Option.Type.NONE),
+                        new BinaryGetOpts.Option("list", new String[]{"-l", "--list-streams"},
+                                BinaryGetOpts.Option.Type.NONE),
+                        new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("name", new String[]{"-n", "--name"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("size", new String[]{"-s", "--size"},
+                                BinaryGetOpts.Option.Type.INT),
+                        new BinaryGetOpts.Option("wait", new String[]{"-w", "--wait"},
+                                BinaryGetOpts.Option.Type.NONE)
+                });
         private static final BinaryGetOpts.Options OPEN_OPTS =
                 new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
                         new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
                                 BinaryGetOpts.Option.Type.STRING),
-                        new BinaryGetOpts.Option("notify", new String[]{"-n", "--notify"},
+                        new BinaryGetOpts.Option("notify", new String[]{"-N", "--notify"},
                                 BinaryGetOpts.Option.Type.NONE),
-                        new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
+                        new BinaryGetOpts.Option("prompt", new String[]{"-p", "--prompt"},
                                 BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
                                 BinaryGetOpts.Option.Type.NONE)
@@ -158,9 +173,9 @@ public final class TermSh {
                                 BinaryGetOpts.Option.Type.NONE),
                         new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
                                 BinaryGetOpts.Option.Type.STRING),
-                        new BinaryGetOpts.Option("notify", new String[]{"-n", "--notify"},
+                        new BinaryGetOpts.Option("notify", new String[]{"-N", "--notify"},
                                 BinaryGetOpts.Option.Type.NONE),
-                        new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
+                        new BinaryGetOpts.Option("prompt", new String[]{"-p", "--prompt"},
                                 BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
                                 BinaryGetOpts.Option.Type.NONE)
@@ -169,11 +184,13 @@ public final class TermSh {
                 new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
                         new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
                                 BinaryGetOpts.Option.Type.STRING),
-                        new BinaryGetOpts.Option("notify", new String[]{"-n", "--notify"},
+                        new BinaryGetOpts.Option("notify", new String[]{"-N", "--notify"},
                                 BinaryGetOpts.Option.Type.NONE),
+                        new BinaryGetOpts.Option("name", new String[]{"-n", "--name"},
+                                BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("size", new String[]{"-s", "--size"},
                                 BinaryGetOpts.Option.Type.INT),
-                        new BinaryGetOpts.Option("title", new String[]{"-t", "--title"},
+                        new BinaryGetOpts.Option("prompt", new String[]{"-p", "--prompt"},
                                 BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
                                 BinaryGetOpts.Option.Type.NONE)
@@ -188,6 +205,12 @@ public final class TermSh {
 
         private static final class ParseException extends RuntimeException {
             private ParseException(final String message) {
+                super(message);
+            }
+        }
+
+        private static final class ArgsException extends RuntimeException {
+            private ArgsException(final String message) {
                 super(message);
             }
         }
@@ -345,6 +368,16 @@ public final class TermSh {
             @NonNull
             private static byte[][] parseArgs(@NonNull final InputStream is)
                     throws IOException, ParseException {
+                /*
+                 * It seems socket_read() contains a bug with exception throwing, see:
+                 * https://android.googlesource.com/platform/frameworks/base/+/master/core/jni/android_net_LocalSocketImpl.cpp
+                 */
+                /*
+                Possible W/A:
+                final byte[] argc_b = new byte[1];
+                final int r = is.read(argc_b);
+                final int argc = r != 1 ? -1 : argc_b[0];
+                */
                 final int argc = is.read();
                 if (argc <= 0) return NOARGS;
                 final byte[][] args = new byte[argc][];
@@ -483,6 +516,26 @@ public final class TermSh {
             }
         }
 
+        private long getSize(@NonNull final Uri uri) {
+            final Cursor c = ui.ctx.getContentResolver().query(uri,
+                    new String[]{OpenableColumns.SIZE},
+                    null, null, null);
+            if (c == null) return -1;
+            try {
+                c.moveToFirst();
+                return c.getLong(c.getColumnIndex(OpenableColumns.SIZE));
+            } catch (final Throwable e) {
+                return -1;
+            } finally {
+                c.close();
+            }
+        }
+
+        private void printHelp(final OutputStream output) throws IOException {
+            output.write(Misc.toUTF8(ui.ctx.getString(
+                    R.string.desc_termsh_help)));
+        }
+
         @SuppressLint("StaticFieldLeak")
         private final class ClientTask extends AsyncTask<Object, Object, Object> {
             @Override
@@ -503,12 +556,11 @@ public final class TermSh {
                 }
                 try {
                     int exitStatus = 0;
-                    if (shellCmd.args.length < 1) throw new ParseException("No command specified");
+                    if (shellCmd.args.length < 1) throw new ArgsException("No command specified");
                     final String command = Misc.fromUTF8(shellCmd.args[0]);
                     switch (command) {
                         case "help":
-                            shellCmd.stdOut.write(Misc.toUTF8(ui.ctx.getString(
-                                    R.string.desc_termsh_help)));
+                            printHelp(shellCmd.stdOut);
                             break;
                         case "notify": {
                             final BinaryGetOpts.Parser ap = new BinaryGetOpts.Parser(shellCmd.args);
@@ -550,6 +602,76 @@ public final class TermSh {
                             ui.postNotification(msg, id);
                             break;
                         }
+                        case "uri": {
+                            final BinaryGetOpts.Parser ap = new BinaryGetOpts.Parser(shellCmd.args);
+                            ap.skip();
+                            final Map<String, ?> opts = ap.parse(URI_OPTS);
+                            if (opts.containsKey("list")) {
+                                for (final Uri uri : StreamProvider.getBoundUriList()) {
+                                    shellCmd.stdOut.write(Misc.toUTF8(uri.toString() + "\n"));
+                                }
+                            } else if (opts.containsKey("close"))
+                                switch (shellCmd.args.length - ap.position) {
+                                    case 1:
+                                        StreamProvider.releaseUri(
+                                                Uri.parse(Misc.fromUTF8(
+                                                        shellCmd.args[ap.position])));
+                                        break;
+                                    default:
+                                        throw new ParseException("No URI specified");
+                                }
+                            else
+                                switch (shellCmd.args.length - ap.position) {
+                                    case 0: {
+                                        final BlockingSync<Object> result = new BlockingSync<>();
+                                        String mime = (String) opts.get("mime");
+                                        if (mime == null) mime = "*/*";
+                                        final Uri uri = StreamProvider.obtainUri(shellCmd.stdIn,
+                                                mime,
+                                                (String) opts.get("name"),
+                                                (Integer) opts.get("size"),
+                                                new StreamProvider.OnResult() {
+                                                    @Override
+                                                    public void onResult(final Object msg) {
+                                                        result.set(null);
+                                                    }
+                                                });
+                                        shellCmd.stdOut.write(Misc.toUTF8(uri.toString() + "\n"));
+                                        if (opts.containsKey("wait")) {
+                                            // Wait here
+                                            shellCmd.onTerminate = new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    StreamProvider.releaseUri(uri);
+                                                    result.set(null);
+                                                }
+                                            };
+                                            result.get();
+                                            shellCmd.onTerminate = null;
+                                            // ===
+                                        }
+                                        break;
+                                    }
+                                    case 1: {
+                                        final String filename = Misc.fromUTF8(shellCmd.args[ap.position]);
+                                        final File file = shellCmd.getOriginalFile(filename);
+                                        checkFile(file);
+                                        final Uri uri;
+                                        try {
+                                            uri = FileProvider.getUriForFile(ui.ctx,
+                                                    BuildConfig.APPLICATION_ID + ".fileprovider",
+                                                    file);
+                                        } catch (final IllegalArgumentException e) {
+                                            throw new FileNotFoundException(e.getMessage());
+                                        }
+                                        shellCmd.stdOut.write(Misc.toUTF8(uri.toString() + "\n"));
+                                        break;
+                                    }
+                                    default:
+                                        throw new ParseException("Wrong number of arguments");
+                                }
+                            break;
+                        }
                         case "view":
                         case "edit": {
                             final boolean writeable = "edit".equals(command);
@@ -557,8 +679,8 @@ public final class TermSh {
                             ap.skip();
                             final Map<String, ?> opts = ap.parse(OPEN_OPTS);
                             String mime = (String) opts.get("mime");
-                            String title = (String) opts.get("title");
-                            if (title == null) title = "Pick application";
+                            String prompt = (String) opts.get("prompt");
+                            if (prompt == null) prompt = "Pick application";
                             if (shellCmd.args.length - ap.position == 1) {
                                 final String filename =
                                         Misc.fromUTF8(shellCmd.args[ap.position]);
@@ -584,14 +706,14 @@ public final class TermSh {
                                         Intent.FLAG_GRANT_WRITE_URI_PERMISSION : 0));
                                 if (opts.containsKey("notify"))
                                     RequesterActivity.showAsNotification(ui.ctx,
-                                            Intent.createChooser(i, title),
+                                            Intent.createChooser(i, prompt),
                                             ui.ctx.getString(R.string.title_shell_of_s,
                                                     ui.ctx.getString(R.string.app_name)),
-                                            title + " (" + filename + ")",
+                                            prompt + " (" + filename + ")",
                                             REQUEST_NOTIFICATION_CHANNEL_ID,
                                             NotificationCompat.PRIORITY_HIGH);
                                 else
-                                    ui.ctx.startActivity(Intent.createChooser(i, title)
+                                    ui.ctx.startActivity(Intent.createChooser(i, prompt)
                                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                             } else {
                                 throw new ParseException("Bad arguments");
@@ -604,8 +726,8 @@ public final class TermSh {
                             final Map<String, ?> opts = ap.parse(SEND_OPTS);
                             String mime = (String) opts.get("mime");
                             if (mime == null) mime = "*/*";
-                            String title = (String) opts.get("title");
-                            if (title == null) title = "Pick destination";
+                            String prompt = (String) opts.get("prompt");
+                            if (prompt == null) prompt = "Pick destination";
                             final String name;
                             final Uri uri;
                             final BlockingSync<Object> result = new BlockingSync<>();
@@ -629,9 +751,9 @@ public final class TermSh {
                                     break;
                                 }
                                 case 0: {
-                                    name = "Stream";
+                                    name = (String) opts.get("name");
                                     uri = StreamProvider.obtainUri(shellCmd.stdIn, mime,
-                                            null, (Integer) opts.get("size"),
+                                            name, (Integer) opts.get("size"),
                                             new StreamProvider.OnResult() {
                                                 @Override
                                                 public void onResult(final Object msg) {
@@ -648,14 +770,14 @@ public final class TermSh {
                             i.putExtra(Intent.EXTRA_STREAM, uri);
                             if (opts.containsKey("notify"))
                                 RequesterActivity.showAsNotification(ui.ctx,
-                                        Intent.createChooser(i, title),
+                                        Intent.createChooser(i, prompt),
                                         ui.ctx.getString(R.string.title_shell_of_s,
                                                 ui.ctx.getString(R.string.app_name)),
-                                        title + " (" + name + ")",
+                                        prompt + " (" + (name == null ? "Stream" : name) + ")",
                                         REQUEST_NOTIFICATION_CHANNEL_ID,
                                         NotificationCompat.PRIORITY_HIGH);
                             else
-                                ui.ctx.startActivity(Intent.createChooser(i, title)
+                                ui.ctx.startActivity(Intent.createChooser(i, prompt)
                                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                             // Wait here
                             shellCmd.onTerminate = new Runnable() {
@@ -676,8 +798,8 @@ public final class TermSh {
                             final Map<String, ?> opts = ap.parse(PICK_OPTS);
                             String mime = (String) opts.get("mime");
                             if (mime == null) mime = "*/*";
-                            String title = (String) opts.get("title");
-                            if (title == null) title = "Pick document";
+                            String prompt = (String) opts.get("prompt");
+                            if (prompt == null) prompt = "Pick document";
 
                             OutputStream output;
                             final ChrootedFile outputFile;
@@ -725,13 +847,13 @@ public final class TermSh {
                                     };
                             final RequesterActivity.Request request = opts.containsKey("notify") ?
                                     RequesterActivity.request(
-                                            ui.ctx, Intent.createChooser(i, title), onResult,
+                                            ui.ctx, Intent.createChooser(i, prompt), onResult,
                                             ui.ctx.getString(R.string.title_shell_of_s,
                                                     ui.ctx.getString(R.string.app_name)),
-                                            title, REQUEST_NOTIFICATION_CHANNEL_ID,
+                                            prompt, REQUEST_NOTIFICATION_CHANNEL_ID,
                                             NotificationCompat.PRIORITY_HIGH) :
                                     RequesterActivity.request(
-                                            ui.ctx, Intent.createChooser(i, title), onResult);
+                                            ui.ctx, Intent.createChooser(i, prompt), onResult);
                             // Wait here
                             shellCmd.onTerminate = new Runnable() {
                                 @Override
@@ -856,10 +978,22 @@ public final class TermSh {
                             final Uri uri = Uri.parse(Misc.fromUTF8(shellCmd.args[1]));
                             final String name = getName(uri);
                             if (name == null) {
-                                shellCmd.stdOut.write(Misc.toUTF8(C.UNNAMED_FILE_NAME));
+                                shellCmd.stdOut.write(Misc.toUTF8(C.UNNAMED_FILE_NAME + "\n"));
                                 exitStatus = 2;
                             } else
-                                shellCmd.stdOut.write(Misc.toUTF8(name));
+                                shellCmd.stdOut.write(Misc.toUTF8(name + "\n"));
+                            break;
+                        }
+                        case "size": {
+                            if (shellCmd.args.length != 2)
+                                throw new ParseException("Wrong number of arguments");
+                            final Uri uri = Uri.parse(Misc.fromUTF8(shellCmd.args[1]));
+                            final long size = getSize(uri);
+                            if (size < 0) {
+                                shellCmd.stdOut.write(Misc.toUTF8(C.UNDEFINED_FILE_SIZE + "\n"));
+                                exitStatus = 2;
+                            } else
+                                shellCmd.stdOut.write(Misc.toUTF8(size + "\n"));
                             break;
                         }
                         case "serial": {
@@ -916,9 +1050,12 @@ public final class TermSh {
                             throw new ParseException("Unknown command");
                     }
                     shellCmd.exit(exitStatus);
-                } catch (final InterruptedException | SecurityException |
-                        IOException | ParseException | BinaryGetOpts.ParseException e) {
+                } catch (final InterruptedException | SecurityException | IOException |
+                        ParseException | ArgsException | BinaryGetOpts.ParseException e) {
                     try {
+                        if (e instanceof ArgsException) {
+                            printHelp(shellCmd.stdErr);
+                        }
                         shellCmd.stdErr.write(Misc.toUTF8(e.getMessage() + "\n"));
                         shellCmd.exit(1);
                     } catch (final IOException ignored) {
