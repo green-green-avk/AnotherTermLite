@@ -14,8 +14,9 @@
 <lic>Supported USB UART devices: Generic USB CDC, CP210X, FTDI, PL2303, CH34x, CP2130 SPI-USB.</lic>
 <lic>Local Linux pty is supported. Feel free to follow directions from
 <a href="http://kevinboone.net/android_nonroot.html">
-<i>Using standard Linux utilities in a stock, non-rooted Android device</i>
-by Kevin Boone</a>. ;)</lic>
+<i>Using standard Linux utilities in a stock, non-rooted Android device</i> by Kevin Boone</a> and
+<a href="https://github.com/green-green-avk/build-proot-android/tree/master/packages">
+especially compiled PRoot</a>. ;)</lic>
 <lic>Shell tool to interact with the Android environment is also present.
 <ulc>
 <lic>Content exchange between other applications and own files / pipes has been implemented
@@ -29,6 +30,11 @@ by Kevin Boone</a>. ;)</lic>
 <lic>And no MoSH.</lic>
 <lic>Builtin screen keyboard and mouse.</lic>
 <lic>Different charsets and customizable key mapping support.</lic>
+</ulc>
+<h1>Links</h1>
+<ulc>
+<lic><a href="https://github.com/green-green-avk/AnotherTermLite/wiki">Wiki</a></lic>
+<lic><a href="https://github.com/green-green-avk/AnotherTermLite">Source at GitHub</a></lic>
 </ulc>
 <h1>Notes</h1>
 <p>Please, be aware, that key mapping of hardware input devices is provided by device vendors
@@ -54,10 +60,6 @@ See <a href="https://github.com/felHR85/UsbSerial/issues/142">this issue</a> for
     <lic>Creators of
     <a href="https://www.fontsquirrel.com/fonts/dejavu-sans-mono">DejaVu Sans Mono</a> font
     (<a href="https://www.fontsquirrel.com/license/dejavu-sans-mono">license</a>).</lic>
-</ulc>
-<h1>Source</h1>
-<ulc>
-<lic><a href="https://github.com/green-green-avk/AnotherTermLite">GitHub</a></lic>
 </ulc>
 ]]></string>
 </resources>
