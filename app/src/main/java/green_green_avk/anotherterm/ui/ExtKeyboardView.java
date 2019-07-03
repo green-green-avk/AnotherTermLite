@@ -692,7 +692,7 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
         protected final PopupWindow window = new PopupWindow(view,
                 mPopupKeySize * 3, mPopupKeySize * 3);
         protected final WeakHandler mHandler = new WeakHandler();
-        protected final int[] mScreenCoords = new int[2];
+        protected final int[] mWindowCoords = new int[2];
         protected KeyTouchState keyState = null;
         protected float ptrA = Float.NaN;
         protected float ptrD = 0f;
@@ -772,10 +772,10 @@ public abstract class ExtKeyboardView extends View /*implements View.OnClickList
             @Override
             public void run() {
                 if (keyState == null) return;
-                ExtKeyboardView.this.getLocationOnScreen(mScreenCoords);
+                ExtKeyboardView.this.getLocationInWindow(mWindowCoords);
                 window.showAtLocation(ExtKeyboardView.this, Gravity.NO_GRAVITY,
-                        (int) (mScreenCoords[0] + keyState.coords.x - window.getWidth() / 2),
-                        (int) (mScreenCoords[1] + keyState.coords.y - window.getHeight() / 2));
+                        (int) (mWindowCoords[0] + keyState.coords.x - window.getWidth() / 2),
+                        (int) (mWindowCoords[1] + keyState.coords.y - window.getHeight() / 2));
             }
         };
 
