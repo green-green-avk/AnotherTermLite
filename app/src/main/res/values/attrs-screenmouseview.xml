@@ -8,7 +8,7 @@
     </declare-styleable>
 
     <style name="AppScreenMouseViewStyle">
-        <item name="cursor">@drawable/ic_mouse_cursor</item>
+        <item name="cursor">@drawable/ic_screen_mouse_cursor</item>
         <item name="cursorSize">56sp</item>
         <item name="vScrollStep">20dp</item>
     </style>

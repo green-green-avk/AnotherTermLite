@@ -26,6 +26,8 @@ public class ScreenMouseView extends ScrollableView {
     protected int cursorSize = 64;
     protected int vScrollStep = 16;
 
+    protected boolean visibleCursor = true;
+
     protected Dialog overlay = null;
     protected ViewGroup overlayButtons = null;
 
@@ -100,6 +102,20 @@ public class ScreenMouseView extends ScrollableView {
         scrollPosition.y = h / 2;
     }
 
+    protected void showCursor() {
+        if (!visibleCursor) {
+            visibleCursor = true;
+            ViewCompat.postInvalidateOnAnimation(this);
+        }
+    }
+
+    protected void hideCursor() {
+        if (visibleCursor) {
+            visibleCursor = false;
+            ViewCompat.postInvalidateOnAnimation(this);
+        }
+    }
+
     @Override
     protected float getLeftScrollLimit() { // negative scale
         return getWidth();
@@ -111,22 +127,29 @@ public class ScreenMouseView extends ScrollableView {
     }
 
     @Override
+    public boolean isOpaque() {
+        return false;
+    }
+
+    @Override
     public boolean hasOverlappingRendering() {
         return false;
     }
 
     @Override
     protected void onDraw(final Canvas canvas) {
-        canvas.save();
-        final int sx = cursorSize;
-        final int sy = cursorSize;
-        final int mx = sx / 2;
-        final int my = sy / 2;
-        canvas.translate(scrollPosition.x - mx, scrollPosition.y - my);
-        canvas.clipRect(0, 0, sx, sy);
-        cursor.setBounds(0, 0, sx, sy);
-        cursor.draw(canvas);
-        canvas.restore();
+        if (visibleCursor) {
+            canvas.save();
+            final int sx = cursorSize;
+            final int sy = cursorSize;
+            final int mx = sx / 2;
+            final int my = sy / 2;
+            canvas.translate(scrollPosition.x - mx, scrollPosition.y - my);
+            canvas.clipRect(0, 0, sx, sy);
+            cursor.setBounds(0, 0, sx, sy);
+            cursor.draw(canvas);
+            canvas.restore();
+        }
     }
 
     @Override
@@ -159,9 +182,19 @@ public class ScreenMouseView extends ScrollableView {
         overlayButtons.setY(event.getRawY() - height / 2);
     }
 
+    public static boolean isMouseEvent(final MotionEvent event) {
+        return event != null &&
+                event.getToolType(0) != MotionEvent.TOOL_TYPE_FINGER;
+    }
+
     @Override
     public boolean onTouchEvent(final MotionEvent event) {
-        if (event.getToolType(0) != MotionEvent.TOOL_TYPE_FINGER) return false;
+        if (isOwnEvent(event)) return false;
+        if (isMouseEvent(event)) {
+            hideCursor();
+            return false;
+        }
+        showCursor();
         final int action = event.getActionMasked();
         switch (action) {
             case MotionEvent.ACTION_DOWN: {
@@ -225,6 +258,13 @@ public class ScreenMouseView extends ScrollableView {
         return super.onTouchEvent(event);
     }
 
+    @Override
+    public boolean onGenericMotionEvent(final MotionEvent event) {
+        if (isOwnEvent(event)) return false;
+        if (isMouseEvent(event)) hideCursor();
+        return false;
+    }
+
     protected int mOverlayButtons = 0;
     protected int mVScroll = 0;
 
@@ -278,28 +318,41 @@ public class ScreenMouseView extends ScrollableView {
         return true;
     }
 
+    protected MotionEvent mOwnEvent = null;
+
+    protected boolean isOwnEvent(final MotionEvent event) {
+        return event == mOwnEvent;
+    }
+
     protected void dispatchEventToSibling(int x, int y, final int action,
                                           final int buttons, final int button, final int vScroll) {
         x += getLeft();
         y += getTop();
         final View v = getTargetView(x, y);
         if (v == null) return;
-        final MotionEvent event = obtainEvent(x - v.getLeft(), y - v.getTop(), action,
+        mOwnEvent = obtainEvent(x - v.getLeft(), y - v.getTop(), action,
                 buttons, button, vScroll);
-        switch (action) {
-            case MotionEvent.ACTION_DOWN:
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_MOVE:
-                v.dispatchTouchEvent(event);
-                break;
-            case MotionEvent.ACTION_SCROLL:
-            case MotionEvent.ACTION_HOVER_MOVE:
+        try {
+            switch (action) {
+                case MotionEvent.ACTION_DOWN:
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_MOVE:
+                    v.dispatchTouchEvent(mOwnEvent);
+                    break;
+                case MotionEvent.ACTION_SCROLL:
+                case MotionEvent.ACTION_HOVER_MOVE:
 //            case MotionEvent.ACTION_BUTTON_PRESS:
 //            case MotionEvent.ACTION_BUTTON_RELEASE:
-                v.dispatchGenericMotionEvent(event);
-                break;
+                    v.dispatchGenericMotionEvent(mOwnEvent);
+                    break;
+            }
+        } finally {
+            try {
+                mOwnEvent.recycle();
+            } finally {
+                mOwnEvent = null;
+            }
         }
-        event.recycle();
     }
 
     protected static MotionEvent obtainEvent(final float x, final float y, final int action,

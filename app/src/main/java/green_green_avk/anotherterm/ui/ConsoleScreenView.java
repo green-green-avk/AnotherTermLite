@@ -485,6 +485,11 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         return buttons;
     }
 
+    public boolean isMouseSupported() {
+        return consoleInput != null && consoleInput.consoleOutput != null &&
+                consoleInput.consoleOutput.isMouseSupported();
+    }
+
     @Override
     public boolean onTouchEvent(final MotionEvent event) {
         if (mouseMode) { // No gestures here
@@ -579,7 +584,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
             ViewCompat.postInvalidateOnAnimation(this);
             return true;
         }
-        if (consoleInput != null && consoleInput.isAltBuf() && !consoleInput.consoleOutput.isMouseSupported()) {
+        if (isMouseSupported() && consoleInput.isAltBuf()) {
             prevVScrollPos += distanceY / scrollScale.y;
             final int lines = (int) prevVScrollPos;
             prevVScrollPos -= lines;
@@ -595,7 +600,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
             ViewCompat.postInvalidateOnAnimation(this);
             return true;
         }
-        if (consoleInput != null && consoleInput.consoleOutput.isMouseSupported()) {
+        if (isMouseSupported()) {
             final int x = getBufferTextPosX(MathUtils.clamp((int) e.getX(), 0, getWidth() - 1));
             final int y = getBufferTextPosY(MathUtils.clamp((int) e.getY(), 0, getHeight() - 1));
             consoleInput.consoleOutput.feed(ConsoleOutput.MouseEventType.PRESS, ConsoleOutput.MOUSE_LEFT, x, y);

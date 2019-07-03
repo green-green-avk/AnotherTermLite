@@ -68,9 +68,15 @@ public final class MouseButtonsWorkAround {
         fixedEvent = obtainEvent(mXY.x, mXY.y, action,
                 mButtons | mInjectedButtons, 0, 0,
                 event.getSource(), mToolType);
-        result = ctx.dispatchTouchEvent(fixedEvent);
-        fixedEvent.recycle();
-        fixedEvent = null;
+        try {
+            result = ctx.dispatchTouchEvent(fixedEvent);
+        } finally {
+            try {
+                fixedEvent.recycle();
+            } finally {
+                fixedEvent = null;
+            }
+        }
         return true;
     }
 
