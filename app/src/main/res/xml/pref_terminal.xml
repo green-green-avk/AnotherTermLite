@@ -6,7 +6,7 @@
 
         <com.pavelsikun.seekbarpreference.SeekBarPreferenceCompat
             android:defaultValue="@integer/terminal_font_default_size_sp"
-            android:key="terminal_font_default_size"
+            android:key="terminal_font_default_size_sp"
             android:title="Default Size"
             app:msbp_dialogEnabled="true"
             app:msbp_interval="1"
