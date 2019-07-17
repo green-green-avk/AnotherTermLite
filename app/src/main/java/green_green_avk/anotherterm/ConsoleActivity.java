@@ -78,6 +78,11 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
         startActivity(new Intent(this, this.getClass()).putExtra(C.IFK_MSG_SESS_KEY, key));
     }
 
+    private static int asSize(final Object o) {
+        if (o instanceof Integer || o instanceof Long) return (int) o;
+        return 0;
+    }
+
     private GestureDetector mGestureDetector;
 
     @Override
@@ -193,11 +198,14 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
         mSession = ConsoleService.sessions.get(k);
         if (mSession == null) return;
         setTitle(ConsoleService.getSessionTitle(k));
-        mSession.uiState.csv.apply(mCsv);
 
         mCsv.setConsoleInput(mSession.input);
         mCkv.setConsoleInput(mSession.input);
         mSession.input.addOnInvalidateSink(this);
+
+        mCsv.setScreenSize(asSize(mSession.connectionParams.get("screen_cols")),
+                asSize(mSession.connectionParams.get("screen_rows")));
+        mSession.uiState.csv.apply(mCsv);
     }
 
     @Override
@@ -467,11 +475,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
                                     } catch (final IllegalArgumentException e) {
                                         height = 0;
                                     }
-                                    mCsv.resizeBufferXOnUi = width <= 0;
-                                    mCsv.resizeBufferYOnUi = height <= 0;
-                                    if (mCsv.resizeBufferXOnUi) width = mCsv.getCols();
-                                    if (mCsv.resizeBufferYOnUi) height = mCsv.getRows();
-                                    mSession.input.resize(width, height);
+                                    mCsv.setScreenSize(width, height);
                                     mCsv.onInvalidateSink(null);
                                 }
                                 dialog.dismiss();

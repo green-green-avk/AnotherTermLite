@@ -35,6 +35,8 @@ public final class FavoriteEditorActivity extends AppCompatActivity {
     private final RawPreferenceUiWrapper mPrefs = new RawPreferenceUiWrapper();
     private ViewGroup mContainer;
     private EditText mNameW;
+    private EditText mScrColsW;
+    private EditText mScrRowsW;
     private Spinner mCharsetW;
     private Spinner mKeyMapW;
     private Spinner mTypeW;
@@ -184,12 +186,22 @@ public final class FavoriteEditorActivity extends AppCompatActivity {
         return ps;
     }
 
+    private static int getSize(@NonNull final EditText et) {
+        try {
+            return Integer.parseInt(et.getText().toString());
+        } catch (final NumberFormatException e) {
+            return 0;
+        }
+    }
+
     @NonNull
     private PreferenceStorage getPreferences() {
         final PreferenceStorage ps = new PreferenceStorage();
         ps.put("type", BackendsList.get(mTypeW.getSelectedItemPosition()).typeStr);
         ps.put("charset", C.charsetList.get(mCharsetW.getSelectedItemPosition()));
         ps.put("keymap", ((TermKeyMapManager.Meta) mKeyMapW.getSelectedItem()).name);
+        ps.put("screen_cols", getSize(mScrColsW));
+        ps.put("screen_rows", getSize(mScrRowsW));
         ps.putAll(mPrefs.getPreferences());
         return ps;
     }
@@ -212,6 +224,16 @@ public final class FavoriteEditorActivity extends AppCompatActivity {
         }
     }
 
+    private static void setText(@NonNull final EditText et, final Object v) {
+        et.setText(v == null ? "" : v.toString());
+    }
+
+    private static void setSizeText(@NonNull final EditText et, final Object v) {
+        if (v instanceof Integer && ((int) v) <= 0 ||
+                v instanceof Long && ((long) v) <= 0L) setText(et, "");
+        else setText(et, v);
+    }
+
     private void setPreferences(@NonNull final PreferenceStorage ps) {
         mPrefsSt = ps;
         final Object type = mPrefsSt.get("type");
@@ -225,6 +247,8 @@ public final class FavoriteEditorActivity extends AppCompatActivity {
                     mTypeW.setSelection(pos);
                 }
         } else mPrefs.setPreferences(mPrefsSt.get());
+        setSizeText(mScrColsW, mPrefsSt.get("screen_cols"));
+        setSizeText(mScrRowsW, mPrefsSt.get("screen_rows"));
         final Object charset = mPrefsSt.get("charset");
         if (charset != null) {
             final int pos = C.charsetList.indexOf(charset.toString());
@@ -274,6 +298,8 @@ public final class FavoriteEditorActivity extends AppCompatActivity {
 
         mContainer = findViewById(R.id.container);
         mNameW = findViewById(R.id.fav_name);
+        mScrColsW = findViewById(R.id.fav_scr_cols);
+        mScrRowsW = findViewById(R.id.fav_scr_rows);
         mCharsetW = findViewById(R.id.fav_charset);
         mKeyMapW = findViewById(R.id.fav_keymap);
         mTypeW = findViewById(R.id.fav_type);

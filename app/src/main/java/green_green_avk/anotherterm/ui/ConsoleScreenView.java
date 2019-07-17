@@ -42,17 +42,17 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
 
         public void save(@NonNull final ConsoleScreenView v) {
             scrollPosition = v.scrollPosition;
-            fontSize = v.getFontSize();
             resizeBufferXOnUi = v.resizeBufferXOnUi;
             resizeBufferYOnUi = v.resizeBufferYOnUi;
+            fontSize = v.getFontSize();
         }
 
         public void apply(@NonNull final ConsoleScreenView v) {
             if (scrollPosition == null) return;
             v.scrollPosition = scrollPosition;
-            v.setFontSize(fontSize);
             v.resizeBufferXOnUi = resizeBufferXOnUi;
             v.resizeBufferYOnUi = resizeBufferYOnUi;
+            v.setFontSize(fontSize);
         }
     }
 
@@ -154,15 +154,26 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         mGestureDetector.setIsLongpressEnabled(false);
     }
 
-    protected void resizeBuffer(int width, int height) {
+    protected void resizeBuffer(int cols, int rows) {
         if (consoleInput == null) return;
-        if (width <= 0 || !resizeBufferXOnUi) width = consoleInput.currScrBuf.getWidth();
-        if (height <= 0 || !resizeBufferYOnUi) height = consoleInput.currScrBuf.getHeight();
-        consoleInput.resize(width, height);
+        if (cols <= 0 || !resizeBufferXOnUi) cols = consoleInput.currScrBuf.getWidth();
+        if (rows <= 0 || !resizeBufferYOnUi) rows = consoleInput.currScrBuf.getHeight();
+        consoleInput.resize(cols, rows);
     }
 
     protected void resizeBuffer() {
         resizeBuffer(getCols(), getRows());
+    }
+
+    /**
+     * Define fixed or variable (if dimension <= 0) screen size.
+     */
+    public void setScreenSize(int cols, int rows) {
+        resizeBufferXOnUi = cols <= 0;
+        resizeBufferYOnUi = rows <= 0;
+        if (resizeBufferXOnUi) cols = getCols();
+        if (resizeBufferYOnUi) rows = getRows();
+        consoleInput.resize(cols, rows);
     }
 
     @Override
@@ -355,23 +366,31 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         return r;
     }
 
-    protected float getBufferDrawPosXF(final int x) {
+    protected float getBufferDrawPosXF(final float x) {
         return (x - scrollPosition.x) * mFontWidth;
     }
 
-    protected float getBufferDrawPosYF(final int y) {
+    protected float getBufferDrawPosYF(final float y) {
         return (y - scrollPosition.y) * mFontHeight;
     }
 
-    protected int getBufferTextPosX(final int x) {
-        return (int) Math.floor(x / mFontWidth + scrollPosition.x);
+    protected float getBufferTextPosXF(final float x) {
+        return x / mFontWidth + scrollPosition.x;
     }
 
-    protected int getBufferTextPosY(final int y) {
-        return (int) Math.floor(y / mFontHeight + scrollPosition.y);
+    protected float getBufferTextPosYF(final float y) {
+        return y / mFontHeight + scrollPosition.y;
     }
 
-    protected void getBufferTextPos(final int x, final int y, @NonNull final Point r) {
+    protected int getBufferTextPosX(final float x) {
+        return (int) getBufferTextPosXF(x);
+    }
+
+    protected int getBufferTextPosY(final float y) {
+        return (int) getBufferTextPosYF(y);
+    }
+
+    protected void getBufferTextPos(final float x, final float y, @NonNull final Point r) {
         r.x = getBufferTextPosX(x);
         r.y = getBufferTextPosY(y);
     }

@@ -117,4 +117,5 @@
     <string name="hint_int_value_p_auto_p">%d (auto)</string>
     <string name="action_send_sigint">Send SIGINT</string>
     <string name="action_send_sighup">Send SIGHUP</string>
+    <string name="label_screen">Screen</string>
 </resources>

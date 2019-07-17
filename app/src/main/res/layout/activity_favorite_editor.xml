@@ -31,7 +31,7 @@
                     android:padding="@dimen/text_padding"
                     tools:ignore="UselessParent">
 
-                    <TableRow>
+                    <TableRow android:gravity="center_vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -46,7 +46,69 @@
                             android:inputType="text" />
                     </TableRow>
 
-                    <TableRow>
+                    <TableRow android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_screen" />
+
+                        <com.google.android.flexbox.FlexboxLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            app:alignItems="center"
+                            app:flexDirection="row"
+                            app:flexWrap="wrap">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/label_cols" />
+
+                                <EditText
+                                    android:id="@+id/fav_scr_cols"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:hint="@string/hint_auto"
+                                    android:inputType="number" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginLeft="@dimen/text_separator"
+                                android:layout_marginRight="@dimen/text_separator"
+                                android:text="X" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/label_rows" />
+
+                                <EditText
+                                    android:id="@+id/fav_scr_rows"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:hint="@string/hint_auto"
+                                    android:inputType="number" />
+                            </LinearLayout>
+
+                        </com.google.android.flexbox.FlexboxLayout>
+
+                    </TableRow>
+
+                    <TableRow android:gravity="center_vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -60,7 +122,7 @@
                             android:layout_weight="1" />
                     </TableRow>
 
-                    <TableRow>
+                    <TableRow android:gravity="center_vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -74,7 +136,7 @@
                             android:layout_weight="1" />
                     </TableRow>
 
-                    <TableRow>
+                    <TableRow android:gravity="center_vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
