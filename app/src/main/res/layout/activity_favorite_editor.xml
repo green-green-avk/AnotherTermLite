@@ -36,7 +36,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/name" />
+                            android:text="@string/label_name" />
 
                         <EditText
                             android:id="@+id/fav_name"
@@ -51,7 +51,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/charset" />
+                            android:text="@string/label_charset" />
 
                         <Spinner
                             android:id="@+id/fav_charset"
@@ -65,7 +65,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/key_map" />
+                            android:text="@string/label_key_map" />
 
                         <Spinner
                             android:id="@+id/fav_keymap"
@@ -79,7 +79,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/type" />
+                            android:text="@string/label_type" />
 
                         <Spinner
                             android:id="@+id/fav_type"
