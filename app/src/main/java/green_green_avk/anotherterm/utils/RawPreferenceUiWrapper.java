@@ -67,13 +67,13 @@ public final class RawPreferenceUiWrapper implements PreferenceUiWrapper {
                 if ((it & InputType.TYPE_NUMBER_FLAG_DECIMAL) != 0) {
                     try {
                         return Double.parseDouble(t);
-                    } catch (NumberFormatException e) {
+                    } catch (final NumberFormatException e) {
                         return new ParseException(view.getContext().getString(R.string.number_expected), view, key, t);
                     }
                 } else {
                     try {
                         return Long.parseLong(t);
-                    } catch (NumberFormatException e) {
+                    } catch (final NumberFormatException e) {
                         return new ParseException(view.getContext().getString(R.string.number_expected), view, key, t);
                     }
                 }
@@ -105,7 +105,7 @@ public final class RawPreferenceUiWrapper implements PreferenceUiWrapper {
         if (view instanceof CompoundButton) {
             try {
                 ((CompoundButton) view).setChecked((boolean) BooleanCaster.CAST(value));
-            } catch (ClassCastException e) {
+            } catch (final ClassCastException e) {
                 Log.e("Preference UI", "Type cast", e);
             }
             return;

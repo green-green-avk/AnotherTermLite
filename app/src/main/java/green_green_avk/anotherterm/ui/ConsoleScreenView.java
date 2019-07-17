@@ -450,7 +450,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     public Bitmap makeThumbnail(int w, int h) {
         if (getWidth() <= 0 || getHeight() <= 0)
             return null;
-        float s = Math.min((float) w / getWidth(), (float) h / getHeight());
+        final float s = Math.min((float) w / getWidth(), (float) h / getHeight());
         w = (int) (getWidth() * s);
         h = (int) (getHeight() * s);
         final Bitmap r = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
