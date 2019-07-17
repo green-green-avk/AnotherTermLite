@@ -109,8 +109,8 @@
     <string name="msg_usd_serial_port_s_disconnected">USB serial port %s disconnected</string>
     <string name="msg_usd_serial_port_s_reconnected">USB serial port %s reconnected</string>
     <string name="note_p_zero_m_off_p">(0 - off)</string>
-    <string name="label_width">Width</string>
-    <string name="label_height">Height</string>
+    <string name="label_cols">Cols</string>
+    <string name="label_rows">Rows</string>
     <string name="action_set_terminal_size">Set size</string>
     <string name="dialog_title_set_terminal_screen_size">Terminal screen size</string>
     <string name="hint_auto">auto</string>
