@@ -999,11 +999,15 @@ public final class TermSh {
                         case "serial": {
                             if (shellCmd.args.length > 2)
                                 throw new ParseException("Wrong number of arguments");
-                            final Map<String, ?> params
-                                    = shellCmd.args.length == 2
-                                    ? UsbUartModule.meta.fromUri(Uri.parse(
-                                    "uart:/" + Misc.fromUTF8(shellCmd.args[1])))
-                                    : null;
+                            final Map<String, ?> params;
+                            try {
+                                params = shellCmd.args.length == 2
+                                        ? UsbUartModule.meta.fromUri(Uri.parse(
+                                        "uart:/" + Misc.fromUTF8(shellCmd.args[1])))
+                                        : null;
+                            } catch (final BackendModule.ParametersUriParseException e) {
+                                throw new ArgsException(e.getMessage());
+                            }
                             final BackendModule be = new UsbUartModule();
                             be.setContext(ui.ctx);
                             be.setOnMessageListener(new BackendModule.OnMessageListener() {
@@ -1038,11 +1042,11 @@ public final class TermSh {
                                         be.disconnect();
                                     } catch (final BackendException ignored) {
                                     }
-                                    throw new IOException(e);
+                                    throw new IOException(e.getMessage());
                                 }
                                 be.disconnect();
                             } catch (final BackendException e) {
-                                throw new IOException(e);
+                                throw new IOException(e.getMessage());
                             }
                             break;
                         }

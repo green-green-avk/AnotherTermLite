@@ -158,6 +158,16 @@ public abstract class BackendModule {
     }
 
     public static final class ParametersUriParseException extends RuntimeException {
+        public ParametersUriParseException() {
+        }
+
+        public ParametersUriParseException(final String message) {
+            super(message);
+        }
+
+        public ParametersUriParseException(final String message, final Throwable cause) {
+            super(message, cause);
+        }
     }
 
     public void setContext(@NonNull final Context context) {

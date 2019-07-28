@@ -45,14 +45,18 @@ public final class UsbUartModule extends BackendModule {
                 params.put(k, uri.getQueryParameter(k));
             }
             final List<String> ps = uri.getPathSegments();
-            if (ps != null && ps.size() == 5) {
+            if (ps != null) {
                 try {
-                    params.put("baudrate", Integer.parseInt(ps.get(0)));
+                    try {
+                        params.put("baudrate", Integer.parseInt(ps.get(0)));
+                    } catch (final NumberFormatException e) {
+                        throw new ParametersUriParseException("Invalid baudrate", e);
+                    }
                     params.put("databits", ps.get(1));
                     params.put("stopbits", ps.get(2));
                     params.put("parity", ps.get(3));
                     params.put("flowcontrol", ps.get(4));
-                } catch (final NumberFormatException ignored) {
+                } catch (final IndexOutOfBoundsException ignored) {
                 }
             }
             return params;
