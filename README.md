@@ -1,8 +1,8 @@
 # AnotherTermLite
 Local pty, USB serial port and Telnet terminal client for Android.
 
-https://play.google.com/store/apps/details?id=green_green_avk.anothertermlite
-
+* https://play.google.com/store/apps/details?id=green_green_avk.anothertermlite
+* https://github.com/green-green-avk/AnotherTermLite/wiki
 
 
 Why another one? Just to have:
@@ -10,6 +10,8 @@ Why another one? Just to have:
 * Local pty, USB serial port (UART) etc. support in the same application;
 
 * Adequate screen input methods as long as a terminal requires specific keyboard functions.
+
+* Ability to set fixed screen columns and/or rows numbers.
 
 
 Features:
@@ -21,12 +23,14 @@ Features:
 * Local Linux pty (aka terminal emulator) is supported. Feel free to follow directions from
 http://kevinboone.net/android_nonroot.html
 "Using standard Linux utilities in a stock, non-rooted Android device"
-by Kevin Boone. ;)
+by Kevin Boone and
+https://github.com/green-green-avk/build-proot-android/tree/master/packages
+especially compiled PRoot. ;)
 
 * Shell tool to interact with the Android environment is also present.
-   - Content exchange between other applications and own files / pipes has been implemented (like Termux).
+   - Content exchange between other applications and own files / pipes has been implemented.
    - It also works in chrooted environments (PRoot at least).
-   - USB serial port dongle access from the command line is also implemented (unlike Termux) ;).
+   - USB serial port dongle access from the command line is also implemented.
 
 * Telnet (no encryption).
 
