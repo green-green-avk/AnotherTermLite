@@ -19,10 +19,9 @@
 especially compiled PRoot</a>. ;)</lic>
 <lic>Shell tool to interact with the Android environment is also present.
 <ulc>
-<lic>Content exchange between other applications and own files / pipes has been implemented
-(like Termux).</lic>
+<lic>Content exchange between other applications and own files / pipes has been implemented.</lic>
 <lic>It also works in chrooted environments (PRoot at least).</lic>
-<lic>USB serial port dongle access from the command line is also implemented (unlike Termux) ;).</lic>
+<lic>USB serial port dongle access from the command line is also implemented.</lic>
 </ulc>
 </lic>
 <lic>Telnet (no encryption).</lic>
