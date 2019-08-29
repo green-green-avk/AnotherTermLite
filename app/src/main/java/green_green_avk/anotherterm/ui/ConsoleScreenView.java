@@ -383,11 +383,11 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     }
 
     protected int getBufferTextPosX(final float x) {
-        return (int) getBufferTextPosXF(x);
+        return (int) Math.floor(getBufferTextPosXF(x));
     }
 
     protected int getBufferTextPosY(final float y) {
-        return (int) getBufferTextPosYF(y);
+        return (int) Math.floor(getBufferTextPosYF(y));
     }
 
     protected void getBufferTextPos(final float x, final float y, @NonNull final Point r) {
