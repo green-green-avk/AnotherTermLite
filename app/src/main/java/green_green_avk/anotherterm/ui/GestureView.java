@@ -8,87 +8,90 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 
-public abstract class GestureView extends View implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener/*, GestureDetector.OnContextClickListener*/ {
-    protected GestureDetector mGestureDetector;
+public abstract class GestureView extends View
+        implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener/*,
+        GestureDetector.OnContextClickListener*/ {
 
-    public GestureView(Context context) {
+    protected final GestureDetector mGestureDetector;
+
+    public GestureView(final Context context) {
         super(context);
-        init();
+        mGestureDetector = new GestureDetector(getContext(), this);
     }
 
-    public GestureView(Context context, AttributeSet attrs) {
+    public GestureView(final Context context, final AttributeSet attrs) {
         super(context, attrs);
-        init();
+        mGestureDetector = new GestureDetector(getContext(), this);
     }
 
-    public GestureView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public GestureView(final Context context, final AttributeSet attrs,
+                       final int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
+        mGestureDetector = new GestureDetector(getContext(), this);
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public GestureView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public GestureView(final Context context, final AttributeSet attrs,
+                       final int defStyleAttr, final int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
-        init();
-    }
-
-    private void init() {
         mGestureDetector = new GestureDetector(getContext(), this);
     }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
+    public boolean onTouchEvent(final MotionEvent event) {
         return mGestureDetector.onTouchEvent(event) || super.onTouchEvent(event);
     }
 
     /*
         @Override
-        public boolean onContextClick(MotionEvent e) {
+        public boolean onContextClick(final MotionEvent e) {
             return false;
         }
     */
     @Override
-    public boolean onDoubleTap(MotionEvent e) {
+    public boolean onDoubleTap(final MotionEvent e) {
         return false;
     }
 
     @Override
-    public boolean onDoubleTapEvent(MotionEvent e) {
+    public boolean onDoubleTapEvent(final MotionEvent e) {
         return false;
     }
 
     @Override
-    public boolean onDown(MotionEvent e) {
+    public boolean onDown(final MotionEvent e) {
         return false;
     }
 
     @Override
-    public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+    public boolean onFling(final MotionEvent e1, final MotionEvent e2,
+                           final float velocityX, final float velocityY) {
         return false;
     }
 
     @Override
-    public void onLongPress(MotionEvent e) {
+    public void onLongPress(final MotionEvent e) {
 
     }
 
     @Override
-    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+    public boolean onScroll(final MotionEvent e1, final MotionEvent e2,
+                            final float distanceX, final float distanceY) {
         return false;
     }
 
     @Override
-    public void onShowPress(MotionEvent e) {
+    public void onShowPress(final MotionEvent e) {
 
     }
 
     @Override
-    public boolean onSingleTapConfirmed(MotionEvent e) {
+    public boolean onSingleTapConfirmed(final MotionEvent e) {
         return false;
     }
 
     @Override
-    public boolean onSingleTapUp(MotionEvent e) {
+    public boolean onSingleTapUp(final MotionEvent e) {
         return false;
     }
 }

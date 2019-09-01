@@ -56,8 +56,8 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         }
     }
 
-    private static final int MSG_BLINK = 0;
-    private static final int INTERVAL_BLINK = 500;
+    protected static final int MSG_BLINK = 0;
+    protected static final int INTERVAL_BLINK = 500; // ms
     protected ConsoleInput consoleInput = null;
     public final ConsoleScreenCharAttrs charAttrs = new ConsoleScreenCharAttrs();
     protected final Paint fgPaint = new Paint();
@@ -460,7 +460,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
             v = consoleInput.currScrBuf.getChars(0, s.last.y, s.last.x + 1);
             if (v != null) sb.append(v.toString().replaceAll(" *$", ""));
         }
-        String r = sb.toString();
+        final String r = sb.toString();
         if (r.isEmpty()) return null;
         return r;
     }

@@ -1,5 +1,6 @@
 package green_green_avk.anotherterm;
 
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -84,7 +85,7 @@ public final class ConsoleOutput {
         if (r != null) feed(r);
     }
 
-    public void feed(final KeyEvent event) {
+    public void feed(@NonNull final KeyEvent event) {
         final int code = event.getKeyCode();
         final int modifiers =
                 ((event.isShiftPressed() ? 1 : 0) |
@@ -101,13 +102,13 @@ public final class ConsoleOutput {
         }
     }
 
-    public void feed(final String v) {
+    public void feed(@NonNull final String v) {
         if (backendModule != null) {
             backendModule.write(v.getBytes(charset));
         }
     }
 
-    public void paste(final String v) {
+    public void paste(@NonNull final String v) {
         feed(bracketedPasteMode ? "\u001B[200~" + v + "\u001B[201~" : v);
     }
 

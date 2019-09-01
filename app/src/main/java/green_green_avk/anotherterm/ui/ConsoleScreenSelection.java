@@ -3,20 +3,29 @@ package green_green_avk.anotherterm.ui;
 import android.graphics.Point;
 
 public class ConsoleScreenSelection {
-    public final Point first = new Point();
-    public final Point last = new Point();
+    public final Point first;
+    public final Point last;
     public boolean isRectangular = false;
+    private final ConsoleScreenSelection inv;
+
+    public ConsoleScreenSelection() {
+        first = new Point();
+        last = new Point();
+        inv = new ConsoleScreenSelection(this);
+    }
+
+    private ConsoleScreenSelection(final ConsoleScreenSelection o) {
+        first = o.last;
+        last = o.first;
+        inv = o;
+    }
 
     public ConsoleScreenSelection getDirect() {
-        final ConsoleScreenSelection r = new ConsoleScreenSelection();
         if (last.y < first.y || last.y == first.y && last.x < first.x) {
-            r.first.set(last.x, last.y);
-            r.last.set(first.x, first.y);
+            inv.isRectangular = isRectangular;
+            return inv;
         } else {
-            r.first.set(first.x, first.y);
-            r.last.set(last.x, last.y);
+            return this;
         }
-        r.isRectangular = isRectangular;
-        return r;
     }
 }

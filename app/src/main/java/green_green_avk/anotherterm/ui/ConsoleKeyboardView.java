@@ -6,6 +6,7 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Rect;
 import android.inputmethodservice.KeyboardView;
+import android.support.annotation.Nullable;
 import android.text.InputType;
 import android.util.AttributeSet;
 import android.view.InputDevice;
@@ -152,8 +153,8 @@ public class ConsoleKeyboardView extends ExtKeyboardView implements
         }
     }
 
-    public void clipboardPaste(final String v) {
-        if (consoleOutput == null) return;
+    public void clipboardPaste(@Nullable final String v) {
+        if (consoleOutput == null || v == null) return;
         consoleOutput.paste(v);
     }
 
