@@ -36,6 +36,12 @@ public final class ConsoleScreenBuffer {
             Arrays.fill(attrs, a);
             return this;
         }
+
+        @Override
+        protected void finalize() throws Throwable {
+            clear(DEF_CHAR_ATTRS);
+            super.finalize();
+        }
     }
 
     private static final class Buffer {
@@ -56,12 +62,14 @@ public final class ConsoleScreenBuffer {
         }
 
         public void clear() {
-            mPoolSize = 0;
-            mRows.clear();
+            mPoolSize = mRows.size();
+            for (final Row row : mRows) {
+                row.clear(DEF_CHAR_ATTRS);
+            }
         }
 
         public Row get(final int i) {
-            return (i < 0 || mRows.size() <= i) ? null : mRows.get(i);
+            return (i < 0 || i >= size()) ? null : mRows.get(i);
         }
 
         // [from, to)
@@ -80,8 +88,8 @@ public final class ConsoleScreenBuffer {
             }
             return new Iterable<Row>() {
                 private final List<Row> ite = mRows.subList(
-                        MathUtils.clamp(_from, 0, mRows.size()),
-                        MathUtils.clamp(_to, 0, mRows.size())
+                        MathUtils.clamp(_from, 0, size()),
+                        MathUtils.clamp(_to, 0, size())
                 );
 
                 @NonNull
@@ -134,20 +142,25 @@ public final class ConsoleScreenBuffer {
             to = MathUtils.clamp(to, 0, mLimit - 1);
             if (from == to) return null;
             n = MathUtils.clamp(n, 0, Math.abs(from - to) + 1);
-            if (mRows.size() == 0) {
-                mRows.add(new Row().clear(a));
+            if (mRows.size() == mPoolSize) {
+                if (mPoolSize == 0)
+                    mRows.add(new Row().clear(a));
+                else {
+                    mRows.get(0).clear(a);
+                    --mPoolSize;
+                }
                 --n;
             }
             Row row = null;
             for (; n > 0; --n) {
-                if (from >= mRows.size()) {
+                if (from >= size()) {
                     if (mPoolSize > 0) {
                         row = mRows.remove(mRows.size() - 1);
                         --mPoolSize;
                     } else row = new Row();
                 } else row = mRows.remove(from);
                 row.clear(a);
-                if (to >= mRows.size()) {
+                if (to >= size()) {
                     mRows.add(row);
                     ++mPoolSize;
                 } else mRows.add(to, row);
