@@ -124,4 +124,18 @@ public abstract class ScrollableView extends GestureView {
         ViewCompat.postInvalidateOnAnimation(this);
         return true;
     }
+
+    // In own units
+    protected void _doScrollBy(final float x, final float y) {
+        mScroller.forceFinished(true);
+        mScroller.startScroll(toIntX(scrollPosition.x), toIntY(scrollPosition.y),
+                toIntX(x), toIntY(y));
+    }
+
+    // In own units
+    public void doScrollTo(float x, float y) {
+        x = MathUtils.clamp(x, getLeftScrollLimit(), getRightScrollLimit());
+        y = MathUtils.clamp(y, getTopScrollLimit(), getBottomScrollLimit());
+        _doScrollBy(x - scrollPosition.x, y - scrollPosition.y);
+    }
 }

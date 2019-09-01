@@ -4,6 +4,8 @@ import android.animation.LayoutTransition;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.ColorStateList;
@@ -15,12 +17,14 @@ import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.UiThread;
+import android.util.AndroidException;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Toast;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -28,10 +32,37 @@ import java.util.NoSuchElementException;
 import java.util.Stack;
 import java.util.WeakHashMap;
 
+import green_green_avk.anotherterm.R;
 import green_green_avk.anotherterm.utils.WeakHandler;
 
 public final class UiUtils {
     private UiUtils() {
+    }
+
+    public static void toClipboard(final Context context, final String v) {
+        final ClipboardManager clipboard =
+                (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard == null) return;
+        if (v == null) {
+            Toast.makeText(context, R.string.msg_nothing_to_copy_to_clipboard, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            clipboard.setPrimaryClip(ClipData.newPlainText(
+                    v.length() < 16 ? v : v.substring(0, 16) + "...",
+                    v
+            ));
+        } catch (final Throwable e) {
+            if (e instanceof AndroidException || e.getCause() instanceof AndroidException) {
+                new AlertDialog.Builder(context)
+                        .setTitle(R.string.msg_text_is_too_large_to_be_copied_into_clipboard)
+                        .setMessage(e.getMessage())
+                        .show();
+                return;
+            }
+            throw e;
+        }
+        Toast.makeText(context, R.string.msg_copied_to_clipboard, Toast.LENGTH_SHORT).show();
     }
 
     @NonNull

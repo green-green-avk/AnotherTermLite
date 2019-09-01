@@ -24,12 +24,18 @@ import android.support.v4.math.MathUtils;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.content.res.AppCompatResources;
 import android.util.AttributeSet;
+import android.view.Gravity;
 import android.view.MotionEvent;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.PopupWindow;
 
 import green_green_avk.anotherterm.ConsoleInput;
 import green_green_avk.anotherterm.ConsoleOutput;
+import green_green_avk.anotherterm.ConsoleScreenBuffer;
 import green_green_avk.anotherterm.ConsoleScreenCharAttrs;
 import green_green_avk.anotherterm.R;
+import green_green_avk.anotherterm.utils.CharsAutoSelector;
 import green_green_avk.anotherterm.utils.WeakHandler;
 
 public class ConsoleScreenView extends ScrollableView implements ConsoleInput.OnInvalidateSink {
@@ -49,7 +55,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
 
         public void apply(@NonNull final ConsoleScreenView v) {
             if (scrollPosition == null) return;
-            v.scrollPosition = scrollPosition;
+            v.scrollPosition.set(scrollPosition);
             v.resizeBufferXOnUi = resizeBufferXOnUi;
             v.resizeBufferYOnUi = resizeBufferYOnUi;
             v.setFontSize(fontSize);
@@ -66,6 +72,8 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     protected final Paint selectionPaint = new Paint();
     protected final Paint paddingMarkupPaint = new Paint();
     protected Drawable selectionMarkerPtr = null;
+    protected Drawable selectionMarkerPad = null;
+    protected Drawable selectionMarkerOOB = null;
     protected Drawable attrMarkupBlinking = null;
     protected Drawable paddingMarkup = null;
     protected Typeface[] typefaces = {
@@ -77,17 +85,123 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     protected float mFontSize = 16;
     protected float mFontWidth;
     protected float mFontHeight;
+    protected float selectionPadSize = 200; // px
     protected ConsoleScreenSelection selection = null;
     protected boolean selectionMode = false;
-    protected final Point selectionMarkerFirst = new Point();
-    protected final Point selectionMarkerLast = new Point();
-    protected Point selectionMarker = selectionMarkerFirst;
+    protected boolean selectionModeIsExpr = false;
+    protected SelectionPopup selectionPopup = null;
+    protected final PointF selectionMarkerFirst = new PointF();
+    protected final PointF selectionMarkerLast = new PointF();
+    protected final PointF selectionMarkerExpr = new PointF();
+    @Nullable
+    protected PointF selectionMarker = null;
     protected boolean mouseMode = false;
     public boolean resizeBufferXOnUi = true;
     public boolean resizeBufferYOnUi = true;
 
     private boolean mBlinkState = true;
     private WeakHandler mHandler = null;
+
+    protected static final int popupMeasureSpec =
+            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+    protected static final int[] noneSelectionModeState = new int[0];
+    protected static final int[] linesSelectionModeState = new int[]{R.attr.state_select_lines};
+    protected static final int[] rectSelectionModeState = new int[]{R.attr.state_select_rect};
+    protected static final int[] exprSelectionModeState = new int[]{R.attr.state_select_expr};
+
+    protected class SelectionPopup {
+        protected final int[] parentPos = new int[2];
+        protected final PopupWindow window;
+        protected final ImageView smv;
+
+        {
+            final View v = inflate(getContext(), R.layout.select_search_popup, null);
+            v.measure(popupMeasureSpec, popupMeasureSpec);
+            window = new PopupWindow(v,
+                    v.getMeasuredWidth(), v.getMeasuredHeight(), false);
+            smv = getContentView().findViewById(R.id.b_select_mode);
+            refresh();
+            getContentView().findViewById(R.id.b_close)
+                    .setOnClickListener(new OnClickListener() {
+                        @Override
+                        public void onClick(final View v) {
+                            setSelectionMode(false);
+                        }
+                    });
+            smv.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(final View v) {
+                    if (getSelectionModeIsExpr()) setSelectionModeIsExpr(false);
+                    else {
+                        if (getSelectionIsRect()) setSelectionModeIsExpr(true);
+                        setSelectionIsRect(!getSelectionIsRect());
+                    }
+                    refresh();
+                }
+            });
+            getContentView().findViewById(R.id.b_select_all)
+                    .setOnClickListener(new OnClickListener() {
+                        @Override
+                        public void onClick(final View v) {
+                            selectAll();
+                            setSelectionModeIsExpr(false);
+                            setSelectionIsRect(true);
+                            setSelectionMode(true);
+                        }
+                    });
+            getContentView().findViewById(R.id.b_copy)
+                    .setOnClickListener(new OnClickListener() {
+                        @Override
+                        public void onClick(final View v) {
+                            UiUtils.toClipboard(getContext(), getSelectedText());
+                        }
+                    });
+            getContentView().findViewById(R.id.b_put)
+                    .setOnClickListener(new OnClickListener() {
+                        @Override
+                        public void onClick(final View v) {
+                            if (consoleInput == null || consoleInput.consoleOutput == null) return;
+                            consoleInput.consoleOutput.paste(getSelectedText());
+                        }
+                    });
+        }
+
+        protected void refresh() {
+            final int[] st;
+            if (getSelectionModeIsExpr()) st = exprSelectionModeState;
+            else if (getSelectionIsRect()) st = rectSelectionModeState;
+            else st = linesSelectionModeState;
+            smv.setImageState(st, false);
+        }
+
+        public View getContentView() {
+            return window.getContentView();
+        }
+
+        public void show() {
+            if (selection != null && !window.isShowing()) {
+                getLocationInWindow(parentPos);
+                final int sx = window.getWidth();
+                final int sy = window.getHeight();
+                int x = (int) getBufferDrawPosXF((selection.first.x +
+                        selection.last.x + 1) / 2f) - sx / 2;
+                x = MathUtils.clamp(x, 0, getWidth() - sx);
+                int y = (int) getBufferDrawPosYF(selection.getDirect().first.y) - sy;
+                if (y < 0) y = (int) getBufferDrawPosYF(selection.getDirect().last.y + 1);
+                if (y > getHeight() - sy)
+                    y = (int) (getBufferDrawPosYF(
+                            (selection.first.y + selection.last.y + 1) / 2f)) - sy / 2;
+                y = MathUtils.clamp(y, 0, getHeight() - sy);
+                window.showAtLocation(ConsoleScreenView.this, Gravity.NO_GRAVITY,
+                        parentPos[0] + x, parentPos[1] + y);
+            }
+            refresh();
+        }
+
+        public void hide() {
+            window.dismiss();
+        }
+    }
 
     public ConsoleScreenView(final Context context, final AttributeSet attrs) {
         this(context, attrs, R.attr.consoleScreenViewStyle);
@@ -107,14 +221,24 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
 
     protected void init(final Context context, final AttributeSet attrs,
                         final int defStyleAttr, final int defStyleRes) {
+        final int cursorColor;
+        final int selectionColor;
         final int attrMarkupAlpha;
         final int paddingMarkupAlpha;
         final TypedArray a = context.obtainStyledAttributes(
                 attrs, R.styleable.ConsoleScreenView, defStyleAttr, defStyleRes);
         try {
+            cursorColor = a.getColor(R.styleable.ConsoleScreenView_cursorColor,
+                    Color.argb(127, 255, 255, 255));
+            selectionColor = a.getColor(R.styleable.ConsoleScreenView_selectionColor,
+                    Color.argb(127, 0, 255, 0));
 //            selectionMarkerPtr = a.getDrawable(R.styleable.ConsoleScreenView_selectionMarker);
             selectionMarkerPtr = AppCompatResources.getDrawable(context,
                     a.getResourceId(R.styleable.ConsoleScreenView_selectionMarker, 0));
+            selectionMarkerPad = AppCompatResources.getDrawable(context,
+                    a.getResourceId(R.styleable.ConsoleScreenView_selectionMarkerPad, 0));
+            selectionMarkerOOB = AppCompatResources.getDrawable(context,
+                    a.getResourceId(R.styleable.ConsoleScreenView_selectionMarkerOOB, 0));
             attrMarkupBlinking = AppCompatResources.getDrawable(context,
                     a.getResourceId(R.styleable.ConsoleScreenView_attrMarkupBlinking, 0));
             attrMarkupAlpha = (int) (a.getFloat(R.styleable.ConsoleScreenView_attrMarkupAlpha,
@@ -130,10 +254,20 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         attrMarkupBlinking.setAlpha(attrMarkupAlpha);
         paddingMarkup.setAlpha(paddingMarkupAlpha);
 
-        cursorPaint.setColor(Color.argb(127, 255, 255, 255));
+        cursorPaint.setColor(cursorColor);
         cursorPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SCREEN));
-        selectionPaint.setColor(Color.argb(127, 0, 255, 0));
+        selectionPaint.setColor(selectionColor);
         selectionPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SCREEN));
+
+        if (selectionMarkerPtr != null)
+            selectionMarkerPtr.setColorFilter(selectionPaint.getColor(), PorterDuff.Mode.MULTIPLY);
+        if (selectionMarkerPad != null)
+            selectionMarkerPad.setColorFilter(selectionPaint.getColor(), PorterDuff.Mode.MULTIPLY);
+        if (selectionMarkerOOB != null)
+            selectionMarkerOOB.setColorFilter(selectionPaint.getColor(), PorterDuff.Mode.MULTIPLY);
+
+        selectionPopup = new SelectionPopup();
+
         paddingMarkupPaint.setColor(getResources().getColor(R.color.colorMiddle));
         paddingMarkupPaint.setStrokeWidth(3);
         paddingMarkupPaint.setStyle(Paint.Style.STROKE);
@@ -258,22 +392,40 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         ViewCompat.postInvalidateOnAnimation(this);
     }
 
+    public float getSelectionPadSize() {
+        return selectionPadSize;
+    }
+
+    public void setSelectionPadSize(final float v) {
+        selectionPadSize = v;
+        ViewCompat.postInvalidateOnAnimation(this);
+    }
+
+    protected void adjustSelectionPopup() {
+        if (selectionMode && !inGesture && mScroller.isFinished()) selectionPopup.show();
+        else selectionPopup.hide();
+    }
+
     public boolean getSelectionMode() {
         return selectionMode;
     }
 
     public void setSelectionMode(final boolean mode) {
+        if (mode) setMouseMode(false);
         selectionMode = mode;
-        scrollDisabled = mode || mouseMode;
         if (mode) {
             if (selection == null) {
                 selection = new ConsoleScreenSelection();
                 selection.first.x = selection.last.x = getCols() / 2;
                 selection.first.y = selection.last.y = getRows() / 2;
+                getCenterText(selection.first.x, selection.first.y, selectionMarkerExpr);
             }
-            getCenter(selection.first.x, selection.first.y, selectionMarkerFirst);
-            getCenter(selection.last.x, selection.last.y, selectionMarkerLast);
+            getCenterText(selection.first.x, selection.first.y, selectionMarkerFirst);
+            getCenterText(selection.last.x, selection.last.y, selectionMarkerLast);
+        } else {
+            unsetCurrentSelectionMarker();
         }
+        adjustSelectionPopup();
         ViewCompat.postInvalidateOnAnimation(this);
     }
 
@@ -288,12 +440,24 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         }
     }
 
-    public boolean getSelectionMarker() {
-        return selectionMarker == selectionMarkerLast;
+    public boolean getSelectionModeIsExpr() {
+        return selectionModeIsExpr;
     }
 
-    public void setSelectionMarker(final boolean last) {
-        selectionMarker = last ? selectionMarkerLast : selectionMarkerFirst;
+    public void setSelectionModeIsExpr(final boolean v) {
+        selectionModeIsExpr = v;
+        ViewCompat.postInvalidateOnAnimation(this);
+    }
+
+    public void selectAll() {
+        if (consoleInput != null) {
+            if (selection == null) selection = new ConsoleScreenSelection();
+            selection.first.x = 0;
+            selection.first.y = consoleInput.currScrBuf.getHeight()
+                    - consoleInput.currScrBuf.getBufferHeight();
+            selection.last.x = consoleInput.currScrBuf.getWidth() - 1;
+            selection.last.y = consoleInput.currScrBuf.getHeight() - 1;
+        }
     }
 
     public boolean getMouseMode() {
@@ -301,14 +465,20 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     }
 
     public void setMouseMode(final boolean mode) {
+        if (mode) setSelectionMode(false);
         mouseMode = mode;
-        scrollDisabled = mode || selectionMode;
+        scrollDisabled = mode;
     }
 
     protected void getCenter(final int x, final int y, @NonNull final Point r) {
         final Rect p = getBufferDrawRect(x, y);
         r.x = (p.left + p.right) / 2;
         r.y = (p.top + p.bottom) / 2;
+    }
+
+    protected void getCenterText(final float x, final float y, @NonNull final PointF r) {
+        r.x = x + 0.5f;
+        r.y = y + 0.5f;
     }
 
     protected Rect getBufferDrawRect(final int x, final int y) {
@@ -382,6 +552,11 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         return y / mFontHeight + scrollPosition.y;
     }
 
+    protected void getBufferTextPosF(final float x, final float y, @NonNull final PointF r) {
+        r.x = getBufferTextPosXF(x);
+        r.y = getBufferTextPosYF(y);
+    }
+
     protected int getBufferTextPosX(final float x) {
         return (int) Math.floor(getBufferTextPosXF(x));
     }
@@ -401,6 +576,22 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
 
     public int getRows() {
         return (int) (getHeight() / mFontHeight);
+    }
+
+    public boolean isOnScreen(float x, float y) {
+        x -= scrollPosition.x;
+        y -= scrollPosition.y;
+        return x >= 0 && x < getCols() && y >= 0 && y < getRows();
+    }
+
+    public void doScrollTextCenterTo(final float x, final float y) {
+        doScrollTo(x - (float) getCols() / 2, y - (float) getRows() / 2);
+    }
+
+    @Override
+    public void computeScroll() {
+        super.computeScroll();
+        adjustSelectionPopup();
     }
 
     public void applyCharAttrs() {
@@ -432,7 +623,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     }
 
     @Nullable
-    public String clipboardCopy() {
+    public String getSelectedText() {
         if (consoleInput == null) return null;
         final ConsoleScreenSelection s = selection.getDirect();
         final StringBuilder sb = new StringBuilder();
@@ -504,18 +695,32 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         return buttons;
     }
 
+    public static boolean isMouseEvent(@Nullable final MotionEvent event) {
+        return event != null &&
+                event.getToolType(0) != MotionEvent.TOOL_TYPE_FINGER;
+    }
+
     public boolean isMouseSupported() {
         return consoleInput != null && consoleInput.consoleOutput != null &&
                 consoleInput.consoleOutput.isMouseSupported();
     }
 
+    protected boolean inGesture = false;
+
     @Override
     public boolean onTouchEvent(final MotionEvent event) {
-        if (mouseMode) { // No gestures here
+        final int action = event.getAction();
+        if (action == MotionEvent.ACTION_DOWN) {
+            inGesture = true;
+            adjustSelectionPopup();
+        }
+        if (selectionMode) {
+            if (action == MotionEvent.ACTION_DOWN) setCurrentSelectionMarker(event);
+        } else if (mouseMode) { // No gestures here
             if (consoleInput != null && consoleInput.consoleOutput != null) {
                 final int x = getBufferTextPosX(MathUtils.clamp((int) event.getX(), 0, getWidth() - 1));
                 final int y = getBufferTextPosY(MathUtils.clamp((int) event.getY(), 0, getHeight() - 1));
-                switch (event.getAction()) {
+                switch (action) {
                     case MotionEvent.ACTION_DOWN: {
                         final int buttons;
                         if (event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER) {
@@ -559,12 +764,20 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
             }
             return true;
         }
-        return super.onTouchEvent(event);
+        final boolean ret = super.onTouchEvent(event);
+        if (action == MotionEvent.ACTION_UP) {
+            unsetCurrentSelectionMarker();
+            inGesture = false;
+            adjustSelectionPopup();
+        }
+        return ret;
     }
 
     @Override
     public boolean onGenericMotionEvent(final MotionEvent event) {
-        if (mouseMode) {
+        if (selectionMode) {
+            // Empty now
+        } else if (mouseMode) {
             if (consoleInput != null && consoleInput.consoleOutput != null) {
                 final int x = getBufferTextPosX(MathUtils.clamp((int) event.getX(), 0, getWidth() - 1));
                 final int y = getBufferTextPosY(MathUtils.clamp((int) event.getY(), 0, getHeight() - 1));
@@ -595,11 +808,21 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     @Override
     public boolean onScroll(final MotionEvent e1, final MotionEvent e2,
                             final float distanceX, final float distanceY) {
-        if (selectionMode) {
-            selectionMarker.x = MathUtils.clamp((int) (selectionMarker.x - distanceX), 0, getWidth() - 1);
-            selectionMarker.y = MathUtils.clamp((int) (selectionMarker.y - distanceY), 0, getHeight() - 1);
-            getBufferTextPos(selectionMarkerFirst.x, selectionMarkerFirst.y, selection.first);
-            getBufferTextPos(selectionMarkerLast.x, selectionMarkerLast.y, selection.last);
+        if (selectionMode && selectionMarker != null) {
+            float smx = getBufferDrawPosXF(selectionMarker.x);
+            float smy = getBufferDrawPosYF(selectionMarker.y);
+            smx = MathUtils.clamp((int) (smx - distanceX), 0, getWidth() - 1);
+            smy = MathUtils.clamp((int) (smy - distanceY), 0, getHeight() - 1);
+            selectionMarker.x = getBufferTextPosXF(smx);
+            selectionMarker.y = getBufferTextPosYF(smy);
+            if (selectionMarker == selectionMarkerExpr) {
+                doAutoSelect();
+            } else {
+                selection.first.set((int) Math.floor(selectionMarkerFirst.x),
+                        (int) Math.floor(selectionMarkerFirst.y));
+                selection.last.set((int) Math.floor(selectionMarkerLast.x),
+                        (int) Math.floor(selectionMarkerLast.y));
+            }
             ViewCompat.postInvalidateOnAnimation(this);
             return true;
         }
@@ -614,18 +837,41 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
 
     @Override
     public boolean onSingleTapUp(final MotionEvent e) {
-        if (selectionMode) {
-            setSelectionMarker(!getSelectionMarker());
-            ViewCompat.postInvalidateOnAnimation(this);
+        if (selectionMode && selectionMarker != null) {
+            if (!isOnScreen(selectionMarker.x, selectionMarker.y))
+                doScrollTextCenterTo(selectionMarker.x, selectionMarker.y);
             return true;
         }
+        final int x = getBufferTextPosX(MathUtils.clamp((int) e.getX(), 0, getWidth() - 1));
+        final int y = getBufferTextPosY(MathUtils.clamp((int) e.getY(), 0, getHeight() - 1));
         if (isMouseSupported()) {
-            final int x = getBufferTextPosX(MathUtils.clamp((int) e.getX(), 0, getWidth() - 1));
-            final int y = getBufferTextPosY(MathUtils.clamp((int) e.getY(), 0, getHeight() - 1));
             consoleInput.consoleOutput.feed(ConsoleOutput.MouseEventType.PRESS, ConsoleOutput.MOUSE_LEFT, x, y);
             consoleInput.consoleOutput.feed(ConsoleOutput.MouseEventType.RELEASE, ConsoleOutput.MOUSE_LEFT, x, y);
+        } else {
+            setSelectionMode(true);
+            setSelectionModeIsExpr(true);
+            getCenterText(x, y, selectionMarkerExpr);
+            doAutoSelect();
+            ViewCompat.postInvalidateOnAnimation(this);
         }
         return super.onSingleTapUp(e);
+    }
+
+    protected void doAutoSelect() {
+        if (consoleInput != null) {
+            final int[] bb = new int[2];
+            final int px = (int) Math.floor(selectionMarkerExpr.x);
+            final int py = (int) Math.floor(selectionMarkerExpr.y);
+            final CharSequence chars = consoleInput.currScrBuf.getChars(0, py,
+                    ConsoleScreenBuffer.MAX_ROW_LEN);
+            if (chars != null) {
+                CharsAutoSelector.select(chars, px, bb);
+                selection.first.set(bb[0], py);
+                selection.last.set(bb[1], py);
+                getCenterText(selection.first.x, selection.first.y, selectionMarkerFirst);
+                getCenterText(selection.last.x, selection.last.y, selectionMarkerLast);
+            }
+        }
     }
 
     @Override
@@ -642,6 +888,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     protected void onDraw(final Canvas canvas) {
         drawContent(canvas);
         if (consoleInput != null) {
+            drawSelection(canvas);
             if (mBlinkState && consoleInput.cursorVisibility) canvas.drawRect(getBufferDrawRect(
                     consoleInput.currScrBuf.getAbsPosX(),
                     consoleInput.currScrBuf.getAbsPosY()),
@@ -650,29 +897,155 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         super.onDraw(canvas);
     }
 
-    protected final boolean isAllSpaces(final CharSequence s) {
+    protected final float getSelectionMarkerDistance(@NonNull final MotionEvent event,
+                                                     @NonNull final PointF marker,
+                                                     final float r) {
+        final float eX = event.getX();
+        final float eY = event.getY();
+        final float mX = MathUtils.clamp(getBufferDrawPosXF(marker.x), 0, getWidth() - 1);
+        final float mY = MathUtils.clamp(getBufferDrawPosYF(marker.y), 0, getHeight() - 1);
+        final float d = (float) Math.hypot(eX - mX, eY - mY);
+        return (d > r) ? Float.POSITIVE_INFINITY : d;
+    }
+
+    protected void setCurrentSelectionMarker(@NonNull final MotionEvent event) {
+        selectionMarker = null;
+        scrollDisabled = mouseMode;
+        if (selectionMode) {
+            final float r = selectionPadSize / 2;
+            if (selectionModeIsExpr) {
+                if (getSelectionMarkerDistance(event, selectionMarkerExpr, r)
+                        != Float.POSITIVE_INFINITY) {
+                    selectionMarker = selectionMarkerExpr;
+                    scrollDisabled = true;
+                    ViewCompat.postInvalidateOnAnimation(this);
+                }
+                return;
+            }
+            final float dF = getSelectionMarkerDistance(event, selectionMarkerFirst, r);
+            final float dL = getSelectionMarkerDistance(event, selectionMarkerLast, r);
+            if (dF < dL) {
+                selectionMarker = selectionMarkerFirst;
+                scrollDisabled = true;
+                ViewCompat.postInvalidateOnAnimation(this);
+                return;
+            }
+            if (dF > dL || dL != Float.POSITIVE_INFINITY) {
+                selectionMarker = selectionMarkerLast;
+                scrollDisabled = true;
+                ViewCompat.postInvalidateOnAnimation(this);
+            }
+        }
+    }
+
+    protected void unsetCurrentSelectionMarker() {
+        if (selectionMarker != null) {
+            selectionMarker = null;
+            scrollDisabled = mouseMode;
+            ViewCompat.postInvalidateOnAnimation(this);
+        }
+    }
+
+    protected void drawSelection(@NonNull final Canvas canvas) {
+        if (selectionMode && selection != null) {
+            final int selH = Math.abs(selection.last.y - selection.first.y) + 1;
+            if (selH == 1 || selection.isRectangular) {
+                canvas.drawRect(getBufferDrawRectInc(selection.first, selection.last), selectionPaint);
+            } else if (selH >= 2) {
+                final ConsoleScreenSelection s = selection.getDirect();
+                canvas.drawRect(getBufferDrawRectInc(
+                        s.first.x,
+                        s.first.y,
+                        ConsoleScreenBuffer.MAX_ROW_LEN - 1,
+                        s.first.y
+                ), selectionPaint);
+                if (selH > 2) {
+                    canvas.drawRect(getBufferDrawRectInc(
+                            0,
+                            s.first.y + 1,
+                            ConsoleScreenBuffer.MAX_ROW_LEN - 1,
+                            s.last.y - 1
+                    ), selectionPaint);
+                }
+                canvas.drawRect(getBufferDrawRectInc(
+                        0,
+                        s.last.y,
+                        s.last.x,
+                        s.last.y
+                ), selectionPaint);
+            }
+            if (selectionMarker != null) {
+                if (selectionMarkerPtr != null) {
+                    drawMarker(canvas, selectionMarkerPtr, selectionMarker, mFontHeight * 3);
+                }
+            } else if (!inGesture) {
+                if (selectionMarkerPad != null) {
+                    if (selectionModeIsExpr) {
+                        drawMarker(canvas, selectionMarkerPad,
+                                selectionMarkerExpr, selectionPadSize);
+                    } else {
+                        drawMarker(canvas, selectionMarkerPad,
+                                selectionMarkerFirst, selectionPadSize);
+                        drawMarker(canvas, selectionMarkerPad,
+                                selectionMarkerLast, selectionPadSize);
+                    }
+                }
+            }
+        }
+    }
+
+    protected final void drawMarker(@NonNull final Canvas canvas, @NonNull final Drawable drawable,
+                                    @NonNull final PointF pos, final float size) {
+        final float oPosX = getBufferDrawPosXF(pos.x);
+        final float oPosY = getBufferDrawPosYF(pos.y);
+        final float posX = MathUtils.clamp(oPosX, 0, getWidth() - 1);
+        final float posY = MathUtils.clamp(oPosY, 0, getHeight() - 1);
+        canvas.save();
+        canvas.translate(posX - size / 2, posY - size / 2);
+        canvas.clipRect(0, 0, size, size);
+        drawable.setBounds(0, 0, (int) size, (int) size);
+        drawable.draw(canvas);
+        canvas.restore();
+        if (selectionMarkerOOB != null && (oPosX != posX || oPosY != posY)) {
+            canvas.save();
+            final float sX = selectionMarkerOOB.getIntrinsicWidth();
+            final float sY = selectionMarkerOOB.getIntrinsicHeight();
+            canvas.translate(MathUtils.clamp(posX, sX / 2, getWidth() - sX / 2),
+                    MathUtils.clamp(posY, sY / 2, getHeight() - sY / 2));
+            canvas.rotate((float) Math.toDegrees(Math.atan2(oPosY - posY, oPosX - posX)));
+            canvas.translate(-sX / 2, -sY / 2);
+            canvas.clipRect(0, 0, sX, sY);
+            selectionMarkerOOB.setBounds(0, 0, (int) sX, (int) sY);
+            selectionMarkerOOB.draw(canvas);
+            canvas.restore();
+        }
+    }
+
+    protected final boolean isAllSpaces(@NonNull final CharSequence s) {
         for (int i = 0; i < s.length(); ++i) if (s.charAt(i) != ' ') return false;
         return true;
     }
 
-    protected void drawContent(final Canvas canvas) {
+    protected final Rect _textRect = new Rect();
+
+    protected void drawContent(@NonNull final Canvas canvas) {
         if (consoleInput != null) {
 //            canvas.drawColor(charAttrs.bgColor);
             final float vDivBuf = getBufferDrawPosYF(0) - 1;
             final float vDivBottom = getBufferDrawPosYF(consoleInput.currScrBuf.getHeight()) - 1;
             final float hDiv = getBufferDrawPosXF(consoleInput.currScrBuf.getWidth()) - 1;
-            final Rect rect = getBufferTextRect(0, 0, getWidth(), getHeight());
-            for (int j = rect.top; j < rect.bottom; j++) {
+            getBufferTextRect(0, 0, getWidth(), getHeight(), _textRect);
+            for (int j = _textRect.top; j < _textRect.bottom; j++) {
                 final float strTop = getBufferDrawPosYF(j);
                 final float strBottom = getBufferDrawPosYF(j + 1)
                         + 1; // fix for old phones rendering glitch
-                int i = rect.left;
-                while (i < rect.right) {
+                int i = _textRect.left;
+                while (i < _textRect.right) {
                     final float strFragLeft = getBufferDrawPosXF(i);
                     consoleInput.currScrBuf.getAttrs(i, j, charAttrs);
                     applyCharAttrs();
                     final CharSequence s =
-                            consoleInput.currScrBuf.getCharsSameAttr(i, j, rect.right);
+                            consoleInput.currScrBuf.getCharsSameAttr(i, j, _textRect.right);
                     if (s == null) {
                         canvas.drawRect(strFragLeft, strTop, getWidth(), strBottom, bgPaint);
                         if (charAttrs.blinking) drawDrawable(canvas, attrMarkupBlinking,
@@ -700,50 +1073,11 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
             canvas.drawLine(0, vDivBottom, getWidth(), vDivBottom, paddingMarkupPaint);
             canvas.drawLine(0, vDivBuf, getWidth(), vDivBuf, paddingMarkupPaint);
             canvas.drawLine(hDiv, 0, hDiv, getHeight(), paddingMarkupPaint);
-            if (selectionMode && selection != null) {
-                final int selH = Math.abs(selection.last.y - selection.first.y) + 1;
-                if (selH == 1 || selection.isRectangular) {
-                    canvas.drawRect(getBufferDrawRectInc(selection.first, selection.last), selectionPaint);
-                } else if (selH >= 2) {
-                    final ConsoleScreenSelection s = selection.getDirect();
-                    canvas.drawRect(getBufferDrawRectInc(
-                            s.first.x,
-                            s.first.y,
-                            getCols() - 1,
-                            s.first.y
-                    ), selectionPaint);
-                    if (selH > 2) {
-                        canvas.drawRect(getBufferDrawRectInc(
-                                0,
-                                s.first.y + 1,
-                                getCols() - 1,
-                                s.last.y - 1
-                        ), selectionPaint);
-                    }
-                    canvas.drawRect(getBufferDrawRectInc(
-                            0,
-                            s.last.y,
-                            s.last.x,
-                            s.last.y
-                    ), selectionPaint);
-                }
-                if (selectionMarkerPtr != null) {
-                    final float smSize = mFontHeight * 3;
-                    final float smPosX = selectionMarker.x - smSize / 2;
-                    final float smPosY = selectionMarker.y - smSize / 2;
-                    canvas.save();
-                    canvas.translate(smPosX, smPosY);
-                    canvas.clipRect(0, 0, smSize, smSize);
-                    selectionMarkerPtr.setBounds(0, 0, (int) smSize, (int) smSize);
-                    selectionMarkerPtr.draw(canvas);
-                    canvas.restore();
-                }
-            }
         }
     }
 
-    protected void drawDrawable(final Canvas canvas, final Drawable drawable,
-                                final int left, final int top, final int right, final int bottom) {
+    protected final void drawDrawable(@NonNull final Canvas canvas, @Nullable final Drawable drawable,
+                                      final int left, final int top, final int right, final int bottom) {
         if (drawable == null) return;
         int xOff = 0;
         int yOff = 0;

@@ -12,6 +12,10 @@ public final class App extends Application {
         public int terminal_font_default_size_sp;
 
         @Keep
+        @Param(defRes = R.integer.terminal_selection_pad_size_dp)
+        public int terminal_selection_pad_size_dp;
+
+        @Keep
         @Param(defRes = R.integer.terminal_key_height_dp)
         public int terminal_key_height_dp;
 

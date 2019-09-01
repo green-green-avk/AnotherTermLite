@@ -16,18 +16,12 @@
         app:showAsAction="always" />
     <item
         android:id="@+id/action_select"
-        android:icon="@drawable/ic_select_lines_rect"
+        android:icon="@drawable/ic_select"
         android:title="Select"
         app:showAsAction="always" />
     <item
-        android:id="@+id/action_copy"
-        android:icon="?android:attr/actionModeCopyDrawable"
-        android:title="@string/action_copy"
-        android:visible="false"
-        app:showAsAction="always" />
-    <item
         android:id="@+id/action_paste"
-        android:icon="?android:attr/actionModePasteDrawable"
+        android:icon="?attr/actionModePasteDrawable"
         android:title="@string/action_paste"
         app:showAsAction="always" />
     <item

@@ -2,7 +2,6 @@ package green_green_avk.anotherterm;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -27,7 +26,6 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
@@ -221,6 +219,8 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
             finish();
             return;
         }
+        mCsv.setSelectionPadSize(((App) getApplication()).settings.terminal_selection_pad_size_dp
+                * getResources().getDisplayMetrics().density);
         mCkv.setAutoRepeatAllowed(((App) getApplication()).settings.terminal_key_repeat);
         mCkv.setAutoRepeatDelay(((App) getApplication()).settings.terminal_key_repeat_delay);
         mCkv.setAutoRepeatInterval(((App) getApplication()).settings.terminal_key_repeat_interval);
@@ -335,24 +335,12 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
         }
     }
 
-    private void turnOffSelectionMode() {
-        final MenuItem mSelectItem = mMenu.findItem(R.id.action_select);
-        final MenuItem mCopyItem = mMenu.findItem(R.id.action_copy);
-        final MenuItem mPasteItem = mMenu.findItem(R.id.action_paste);
-        UiUtils.setMenuItemIconState(mSelectItem, new int[]{}, toolbarIconColor);
-        mCsv.setSelectionMode(false);
-        mCopyItem.setVisible(false);
-        mPasteItem.setVisible(true);
-        mCsv.setSelectionIsRect(false);
-    }
-
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_mouse: {
                 mCsv.setMouseMode(!mCsv.getMouseMode());
                 if (mCsv.getMouseMode()) {
-                    turnOffSelectionMode();
                     UiUtils.setMenuItemIconState(item, new int[]{android.R.attr.state_checked}, toolbarIconColor);
                     item.setChecked(true);
                     mSmv.setVisibility(View.VISIBLE);
@@ -370,36 +358,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
                 return true;
             }
             case R.id.action_select: {
-                if (!mCsv.getSelectionMode()) {
-                    turnOffMouseMode();
-                    final MenuItem mCopyItem = mMenu.findItem(R.id.action_copy);
-                    final MenuItem mPasteItem = mMenu.findItem(R.id.action_paste);
-                    UiUtils.setMenuItemIconState(item, new int[]{R.attr.state_select_lines}, toolbarIconColor);
-                    mCsv.setSelectionMarker(false);
-                    mCopyItem.setVisible(true);
-                    mPasteItem.setVisible(false);
-                    mCsv.setSelectionMode(true);
-                } else if (!mCsv.getSelectionIsRect()) {
-                    UiUtils.setMenuItemIconState(item, new int[]{R.attr.state_select_rect}, toolbarIconColor);
-                    mCsv.setSelectionIsRect(true);
-                } else {
-                    turnOffSelectionMode();
-                }
-                return true;
-            }
-            case R.id.action_copy: {
-                final ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                if (clipboard == null) return true;
-                final String v = mCsv.clipboardCopy();
-                if (v == null) {
-                    Toast.makeText(this, R.string.msg_nothing_to_copy_to_clipboard, Toast.LENGTH_SHORT).show();
-                    return true;
-                }
-                clipboard.setPrimaryClip(ClipData.newPlainText(
-                        v.length() < 16 ? v : v.substring(0, 16) + "...",
-                        v
-                ));
-                Toast.makeText(this, R.string.msg_copied_to_clipboard, Toast.LENGTH_SHORT).show();
+                mCsv.setSelectionMode(!mCsv.getSelectionMode());
                 return true;
             }
             case R.id.action_paste: {
