@@ -2,188 +2,188 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="desc_termsh_help" tools:ignore="TypographyDashes,TypographyEllipsis"><![CDATA[
 \
-    USAGE:
-
-    $TERMSH [-r|--raw] <command> [<args...>]
-
-      -r|--raw - raw mode as set by cfmakeraw() libc function.
-        (Beware, Ctrl-C etc. are not captured by the terminal in this mode.)
-
-
-    Commands:
-
-    * help
-
-        This message.
-
-
-    * notify [-i|--id <id>] [--] [<message>]
-      notify -r|--remove -i|--id <id>
-
-        Display notification,
-        stdin will be used if no message argument provided.
-
-        -i|--id <id> - notification id.
-
-        -r|--remove - remove notification by id.
-
-
-    * uri [--] <file>
-      uri [-m|--mime <mime>] [-n|--name <name>] [-s|--size <size>]
-      uri -c|--close-stream [--] <URI>
-      uri -l|--list-streams
-
-        Get own content provider URI for specified file or stream
-        or close previously opened stream.
-        Command exits immediately unless `--wait\' is specified.
-        In case of stream, the <URI> will automatically be unbound
-        when stream is read to its EOF
-        or it can be closed by `--close-stream\' option.
-
-        -m|--mime <mime> - Mime type, `*/*\' - default.
-
-        -n|--name <name> - name to use for representing a stream.
-
-        -s|--size <size> - size in bytes to provide in the query answer
-                           if input is a stream.
-                           GMail client, for example, treats absence
-                           of the size as zero size even in case of
-                           a stream.
-
-        -w|--wait - wait for the stream until it reaches EOF
-                    then closes it and exits;
-                    $TERMSH termination is also closes the stream.
-                    Use when you need to keep a shell pipe line running;
-                    example: tar -czv * | $TERMSH uri -w
-
-        -c|--close-stream <URI> - unbind the stream <URI> and free related resources.
-
-        -l|--list-streams - list all bound stream URIs.
-
-
-    * [view|edit] [<options...>] [--] <file|URI>
-
-        Open for view / edit with appropriate temporary access rights.
-        Command exits immediately.
-
-        Options:
-
-        -N|--notify - post a notification instead of open the chooser dialog.
-
-        -m|--mime <mime> - Mime type, `*/*\' - default.
-
-        -p|--prompt <prompt> - to show in chooser dialog.
-
-        -u|--uri - use URI instead of file.
-
-
-    * send [<options...>] [--] [<file|URI>]
-
-        Send (android.intent.action.SEND).
-        If no <file|URI> is specified, stdin is used.
-        Command exits after a stream was sent or immediately
-        if a file or URI is specified.
-
-        Options:
-
-        -N|--notify - post a notification instead of open the chooser dialog.
-
-        -m|--mime <mime> - Mime type, `*/*\' - default.
-
-        -n|--name <name> - name to use for representing a stream.
-
-        -s|--size <size> - size in bytes to provide in the query answer
-                           if input is a stream.
-                           GMail client, for example, treats absence of the size
-                           as zero size even in case of a stream.
-
-        -p|--prompt <prompt> - to show in chooser dialog.
-
-        -u|--uri - use URI instead of file.
-
-
-    * pick [<options...>] [--] [<path>]
-
-        Show document picker dialog and URI to:
-         - file if <path> is a file;
-         - file with the name provided by content provider (or deduced from the URI)*
-            if <path> is a directory;
-         - stdout if nothing is specified.
-        Command exits after content was received or right after chooser dialog result
-        if a URI is specified.
-
-        Options:
-
-        -N|--notify - post a notification instead of open the chooser dialog.
-
-        -m|--mime <mime> - Mime type, `*/*\' - default.
-
-        -p|--prompt <prompt> - to show in chooser dialog.
-
-        -u|--uri - output URI instead of content.
-
-        -f|--force - permit destination overwriting.
-
-        Example: $TERMSH pick .
-
-
-    * copy [-f|--force] [-fp|--from-path|-fu|--from-uri <from>] [-tp|--to-path|-tu|--to-uri <to>]
-
-        Copy content. Only single files are supported now.
-        If <from> or <to> is not specified, stdin or stdout will be used respectively.
-        <to> can be a directory*.
-
-        -f|--force - permit destination overwriting.
-
-
-    * cat [<URI> ...]
-
-        Concatenate the stdin (if not a tty or no arguments given)
-        and specified Android URIs content to the stdout.
-        Command exits immediately.
-
-        Examples:
-
-            $TERMSH cat content://$APP_ID.linksprovider/html/some_url_to_be_wrapped_into_html
-
-            uri="`$TERMSH pick -u`"
-            $TERMSH cat "$uri" > "`$TERMSH name \"$uri\"`.new"
-
-
-    * name <URI>
-
-        Get the name provided by content provider (or deduced from the URI)*
-
-
-    * size <URI>
-
-        Get the size provided by content provider (or `null\' if not defined)
-
-
-    * serial [<baudrate>[/<databits>[/<stopbits>[/<parity>[/<flowcontrol>]]]]]
-
-        Connect to an USB serial dongle and use stdin / stdout.
-
-        Default: 9600/8/1/none/off
-
-        databits - 8, 7, 6, 5
-
-        stopbits - 1, 1.5, 2
-
-        parity - none, even, odd, mark, space
-
-        flowcontrol - off, xon_xoff, rts_cts, dsr_dtr
-
-
-    Notes:
-        * `unnamed\' is used if name deduction fails and exit code 2 is returned.
-
-
-    Environment:
-
-    * TERMSH_UID - a real UID for this application to use for spoofing detection.
-                   It\'s actual before Android 6.0:
-                   https://android.googlesource.com/platform/external/sepolicy/+/android-6.0.1_r81/untrusted_app.te#141
+\ \ \ \ USAGE:\
+\
+\ \ \ \ $TERMSH [-r|--raw] <command> [<args...>]\
+\
+\ \ \ \ \ \ -r|--raw - raw mode as set by cfmakeraw() libc function.\
+\ \ \ \ \ \ \ \ (Beware, Ctrl-C etc. are not captured by the terminal in this mode.)\
+\
+\
+\ \ \ \ Commands:\
+\
+\ \ \ \ * help\
+\
+\ \ \ \ \ \ \ \ This message.\
+\
+\
+\ \ \ \ * notify [-i|--id <id>] [--] [<message>]\
+\ \ \ \ \ \ notify -r|--remove -i|--id <id>\
+\
+\ \ \ \ \ \ \ \ Display notification,\
+\ \ \ \ \ \ \ \ stdin will be used if no message argument provided.\
+\
+\ \ \ \ \ \ \ \ -i|--id <id> - notification id.\
+\
+\ \ \ \ \ \ \ \ -r|--remove - remove notification by id.\
+\
+\
+\ \ \ \ * uri [--] <file>\
+\ \ \ \ \ \ uri [-m|--mime <mime>] [-n|--name <name>] [-s|--size <size>]\
+\ \ \ \ \ \ uri -c|--close-stream [--] <URI>\
+\ \ \ \ \ \ uri -l|--list-streams\
+\
+\ \ \ \ \ \ \ \ Get own content provider URI for specified file or stream\
+\ \ \ \ \ \ \ \ or close previously opened stream.\
+\ \ \ \ \ \ \ \ Command exits immediately unless `--wait\' is specified.\
+\ \ \ \ \ \ \ \ In case of stream, the <URI> will automatically be unbound\
+\ \ \ \ \ \ \ \ when stream is read to its EOF\
+\ \ \ \ \ \ \ \ or it can be closed by `--close-stream\' option.\
+\
+\ \ \ \ \ \ \ \ -m|--mime <mime> - Mime type, `*/*\' - default.\
+\
+\ \ \ \ \ \ \ \ -n|--name <name> - name to use for representing a stream.\
+\
+\ \ \ \ \ \ \ \ -s|--size <size> - size in bytes to provide in the query answer\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if input is a stream.\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ GMail client, for example, treats absence\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ of the size as zero size even in case of\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ a stream.\
+\
+\ \ \ \ \ \ \ \ -w|--wait - wait for the stream until it reaches EOF\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ then closes it and exits;\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ $TERMSH termination is also closes the stream.\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Use when you need to keep a shell pipe line running;\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ example: tar -czv * | $TERMSH uri -w\
+\
+\ \ \ \ \ \ \ \ -c|--close-stream <URI> - unbind the stream <URI> and free related resources.\
+\
+\ \ \ \ \ \ \ \ -l|--list-streams - list all bound stream URIs.\
+\
+\
+\ \ \ \ * [view|edit] [<options...>] [--] <file|URI>\
+\
+\ \ \ \ \ \ \ \ Open for view / edit with appropriate temporary access rights.\
+\ \ \ \ \ \ \ \ Command exits immediately.\
+\
+\ \ \ \ \ \ \ \ Options:\
+\
+\ \ \ \ \ \ \ \ -N|--notify - post a notification instead of open the chooser dialog.\
+\
+\ \ \ \ \ \ \ \ -m|--mime <mime> - Mime type, `*/*\' - default.\
+\
+\ \ \ \ \ \ \ \ -p|--prompt <prompt> - to show in chooser dialog.\
+\
+\ \ \ \ \ \ \ \ -u|--uri - use URI instead of file.\
+\
+\
+\ \ \ \ * send [<options...>] [--] [<file|URI>]\
+\
+\ \ \ \ \ \ \ \ Send (android.intent.action.SEND).\
+\ \ \ \ \ \ \ \ If no <file|URI> is specified, stdin is used.\
+\ \ \ \ \ \ \ \ Command exits after a stream was sent or immediately\
+\ \ \ \ \ \ \ \ if a file or URI is specified.\
+\
+\ \ \ \ \ \ \ \ Options:\
+\
+\ \ \ \ \ \ \ \ -N|--notify - post a notification instead of open the chooser dialog.\
+\
+\ \ \ \ \ \ \ \ -m|--mime <mime> - Mime type, `*/*\' - default.\
+\
+\ \ \ \ \ \ \ \ -n|--name <name> - name to use for representing a stream.\
+\
+\ \ \ \ \ \ \ \ -s|--size <size> - size in bytes to provide in the query answer\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if input is a stream.\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ GMail client, for example, treats absence of the size\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ as zero size even in case of a stream.\
+\
+\ \ \ \ \ \ \ \ -p|--prompt <prompt> - to show in chooser dialog.\
+\
+\ \ \ \ \ \ \ \ -u|--uri - use URI instead of file.\
+\
+\
+\ \ \ \ * pick [<options...>] [--] [<path>]\
+\
+\ \ \ \ \ \ \ \ Show document picker dialog and URI to:\
+\ \ \ \ \ \ \ \ \ - file if <path> is a file;\
+\ \ \ \ \ \ \ \ \ - file with the name provided by content provider (or deduced from the URI)*\
+\ \ \ \ \ \ \ \ \ \ \ \ if <path> is a directory;\
+\ \ \ \ \ \ \ \ \ - stdout if nothing is specified.\
+\ \ \ \ \ \ \ \ Command exits after content was received or right after chooser dialog result\
+\ \ \ \ \ \ \ \ if a URI is specified.\
+\
+\ \ \ \ \ \ \ \ Options:\
+\
+\ \ \ \ \ \ \ \ -N|--notify - post a notification instead of open the chooser dialog.\
+\
+\ \ \ \ \ \ \ \ -m|--mime <mime> - Mime type, `*/*\' - default.\
+\
+\ \ \ \ \ \ \ \ -p|--prompt <prompt> - to show in chooser dialog.\
+\
+\ \ \ \ \ \ \ \ -u|--uri - output URI instead of content.\
+\
+\ \ \ \ \ \ \ \ -f|--force - permit destination overwriting.\
+\
+\ \ \ \ \ \ \ \ Example: $TERMSH pick .\
+\
+\
+\ \ \ \ * copy [-f|--force] [-fp|--from-path|-fu|--from-uri <from>] [-tp|--to-path|-tu|--to-uri <to>]\
+\
+\ \ \ \ \ \ \ \ Copy content. Only single files are supported now.\
+\ \ \ \ \ \ \ \ If <from> or <to> is not specified, stdin or stdout will be used respectively.\
+\ \ \ \ \ \ \ \ <to> can be a directory*.\
+\
+\ \ \ \ \ \ \ \ -f|--force - permit destination overwriting.\
+\
+\
+\ \ \ \ * cat [<URI> ...]\
+\
+\ \ \ \ \ \ \ \ Concatenate the stdin (if not a tty or no arguments given)\
+\ \ \ \ \ \ \ \ and specified Android URIs content to the stdout.\
+\ \ \ \ \ \ \ \ Command exits immediately.\
+\
+\ \ \ \ \ \ \ \ Examples:\
+\
+\ \ \ \ \ \ \ \ \ \ \ \ $TERMSH cat content://$APP_ID.linksprovider/html/some_url_to_be_wrapped_into_html\
+\
+\ \ \ \ \ \ \ \ \ \ \ \ uri=\"`$TERMSH pick -u`\"\
+\ \ \ \ \ \ \ \ \ \ \ \ $TERMSH cat \"$uri\" > \"`$TERMSH name \\\"$uri\\\"`.new\"\
+\
+\
+\ \ \ \ * name <URI>\
+\
+\ \ \ \ \ \ \ \ Get the name provided by content provider (or deduced from the URI)*\
+\
+\
+\ \ \ \ * size <URI>\
+\
+\ \ \ \ \ \ \ \ Get the size provided by content provider (or `null\' if not defined)\
+\
+\
+\ \ \ \ * serial [<baudrate>[/<databits>[/<stopbits>[/<parity>[/<flowcontrol>]]]]]\
+\
+\ \ \ \ \ \ \ \ Connect to an USB serial dongle and use stdin / stdout.\
+\
+\ \ \ \ \ \ \ \ Default: 9600/8/1/none/off\
+\
+\ \ \ \ \ \ \ \ databits - 8, 7, 6, 5\
+\
+\ \ \ \ \ \ \ \ stopbits - 1, 1.5, 2\
+\
+\ \ \ \ \ \ \ \ parity - none, even, odd, mark, space\
+\
+\ \ \ \ \ \ \ \ flowcontrol - off, xon_xoff, rts_cts, dsr_dtr\
+\
+\
+\ \ \ \ Notes:\
+\ \ \ \ \ \ \ \ * `unnamed\' is used if name deduction fails and exit code 2 is returned.\
+\
+\
+\ \ \ \ Environment:\
+\
+\ \ \ \ * TERMSH_UID - a real UID for this application to use for spoofing detection.\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ It\'s actual before Android 6.0:\
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ https://android.googlesource.com/platform/external/sepolicy/+/android-6.0.1_r81/untrusted_app.te#141\
 \
 \
 ]]></string>
