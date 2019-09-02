@@ -266,7 +266,7 @@ public final class ConsoleActivity extends AppCompatActivity implements ConsoleI
                             mSession.input.setCharset(charset);
                             mSession.output.setCharset(charset);
                             chi.setTitle(charsetStr);
-                        } catch (IllegalArgumentException e) {
+                        } catch (final IllegalArgumentException e) {
                             Log.e("Charset", charsetStr, e);
                         }
                     }
