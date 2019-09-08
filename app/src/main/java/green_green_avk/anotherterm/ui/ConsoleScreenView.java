@@ -161,7 +161,8 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
                         @Override
                         public void onClick(final View v) {
                             if (consoleInput == null || consoleInput.consoleOutput == null) return;
-                            consoleInput.consoleOutput.paste(getSelectedText());
+                            final String s = getSelectedText();
+                            if (s != null) consoleInput.consoleOutput.paste(s);
                         }
                     });
         }
