@@ -152,15 +152,16 @@ public final class ConsoleScreenBuffer {
                 --n;
             }
             Row row = null;
+            final int count = size();
             for (; n > 0; --n) {
-                if (from >= size()) {
+                if (from >= count) {
                     if (mPoolSize > 0) {
                         row = mRows.remove(mRows.size() - 1);
                         --mPoolSize;
                     } else row = new Row();
                 } else row = mRows.remove(from);
                 row.clear(a);
-                if (to >= size()) {
+                if (to >= count) {
                     mRows.add(row);
                     ++mPoolSize;
                 } else mRows.add(to, row);
