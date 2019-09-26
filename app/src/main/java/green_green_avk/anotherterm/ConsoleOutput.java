@@ -112,10 +112,12 @@ public final class ConsoleOutput {
         feed(bracketedPasteMode ? "\u001B[200~" + v + "\u001B[201~" : v);
     }
 
-    public void vScroll(final int lines) {
+    public void vScroll(int lines) {
         if (lines == 0) return;
-        if (lines < 0) feed(TermKeyMap.KEYCODE_SCROLL_SCREEN_UP, false, false, false);
-        else feed(TermKeyMap.KEYCODE_SCROLL_SCREEN_DOWN, false, false, false);
+        if (lines < 0) while (lines++ < 0)
+            feed(TermKeyMap.KEYCODE_SCROLL_SCREEN_UP, false, false, false);
+        else while (lines-- > 0)
+            feed(TermKeyMap.KEYCODE_SCROLL_SCREEN_DOWN, false, false, false);
     }
 
     public boolean isMouseSupported() {

@@ -3,6 +3,7 @@ package green_green_avk.anotherterm;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 import android.util.SparseBooleanArray;
 
@@ -60,9 +61,18 @@ public final class ConsoleInput implements BytesSink {
             consoleOutput.feed(v);
     }
 
-    public ConsoleInput() {
+    {
+        final ConsoleScreenBuffer.OnScroll h = new ConsoleScreenBuffer.OnScroll() {
+            @Override
+            public void onScroll(@NonNull final ConsoleScreenBuffer buf,
+                                 final int from, final int to, final int n) {
+                if (buf == currScrBuf) dispatchOnBufferScroll(from, to, n);
+            }
+        };
         mainScrBuf = new ConsoleScreenBuffer(80, 24, 10000);
         altScrBuf = new ConsoleScreenBuffer(80, 24, 24);
+        mainScrBuf.setOnScroll(h);
+        altScrBuf.setOnScroll(h);
         currScrBuf = mainScrBuf;
         setCharset(Charset.defaultCharset());
     }
@@ -72,10 +82,11 @@ public final class ConsoleInput implements BytesSink {
     }
 
     public interface OnInvalidateSink {
-        void onInvalidateSink(Rect rect);
+        void onInvalidateSink(@Nullable Rect rect);
     }
 
-    private Set<OnInvalidateSink> mOnInvalidateSink = Collections.newSetFromMap(new WeakHashMap<OnInvalidateSink, Boolean>());
+    private Set<OnInvalidateSink> mOnInvalidateSink =
+            Collections.newSetFromMap(new WeakHashMap<OnInvalidateSink, Boolean>());
 
     public void addOnInvalidateSink(@NonNull final OnInvalidateSink h) {
         mOnInvalidateSink.add(h);
@@ -88,6 +99,27 @@ public final class ConsoleInput implements BytesSink {
     public void invalidateSink() {
         for (final OnInvalidateSink h : mOnInvalidateSink)
             h.onInvalidateSink(null);
+    }
+
+    public interface OnBufferScroll {
+        void onBufferScroll(int from, int to, int n);
+    }
+
+    private Set<OnBufferScroll> mOnBufferScroll =
+            Collections.newSetFromMap(new WeakHashMap<OnBufferScroll, Boolean>());
+
+    public void addOnBufferScroll(@NonNull final OnBufferScroll h) {
+        mOnBufferScroll.add(h);
+    }
+
+    public void removeOnBufferScroll(@NonNull final OnBufferScroll h) {
+        mOnBufferScroll.remove(h);
+    }
+
+    private void dispatchOnBufferScroll(int from, int to, int n) {
+        for (final OnBufferScroll h : mOnBufferScroll) {
+            h.onBufferScroll(from, to, n);
+        }
     }
 
     public void reset() {

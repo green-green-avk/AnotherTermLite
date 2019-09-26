@@ -4,6 +4,7 @@ import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.math.MathUtils;
 
 import org.apache.commons.collections4.list.TreeList;
@@ -137,11 +138,13 @@ public final class ConsoleScreenBuffer {
         }
 
         // [from, to]
-        public Row scroll(int from, int to, int n, final int a) {
+        // to >= mLimit - remove rows
+        public void scroll(int from, int to, int n, final int a) {
+            if (n < 1) return;
             from = MathUtils.clamp(from, 0, mLimit - 1);
-            to = MathUtils.clamp(to, 0, mLimit - 1);
-            if (from == to) return null;
-            n = MathUtils.clamp(n, 0, Math.abs(from - to) + 1);
+            to = MathUtils.clamp(to, 0, mLimit);
+            if (from == to) return;
+            n = MathUtils.clamp(n, 1, Math.abs(from - to) + 1);
             if (mRows.size() == mPoolSize) {
                 if (mPoolSize == 0)
                     mRows.add(new Row().clear(a));
@@ -151,8 +154,8 @@ public final class ConsoleScreenBuffer {
                 }
                 --n;
             }
-            Row row = null;
             for (; n > 0; --n) {
+                final Row row;
                 final int count = size();
                 if (from >= count) {
                     if (mPoolSize > 0) {
@@ -166,12 +169,11 @@ public final class ConsoleScreenBuffer {
                     ++mPoolSize;
                 } else mRows.add(to, row);
             }
-            return row;
         }
 
-        public Row scroll(final int n, final int a) {
-            if (n < 0) return scroll(0, mLimit - 1, -n, a);
-            return scroll(mLimit - 1, 0, n, a);
+        public void scroll(final int n, final int a) {
+            if (n < 0) scroll(0, mLimit, -n, a);
+            else scroll(mLimit - 1, 0, n, a);
         }
     }
 
@@ -252,13 +254,40 @@ public final class ConsoleScreenBuffer {
         return getRows(from, to);
     }
 
-    // [from, to]
-    private Row scroll(final int from, final int to, final int n, final int a) {
-        return mBuffer.scroll(toBufY(from), toBufY(to), n, a);
+    public interface OnScroll {
+        void onScroll(@NonNull ConsoleScreenBuffer buf, int from, int to, int n);
     }
 
-    private Row scroll(final int n, final int a) {
-        return mBuffer.scroll(n, a);
+    private OnScroll mOnScroll = null;
+
+    public void setOnScroll(@Nullable final OnScroll onScroll) {
+        mOnScroll = onScroll;
+    }
+
+    private void callOnScroll(final int from, final int to, final int n) {
+        if (mOnScroll != null) mOnScroll.onScroll(this, from, to, n);
+    }
+
+    // [from, to]
+    private void scroll(final int from, final int to, final int n, final int a) {
+        mBuffer.scroll(toBufY(from), toBufY(to), n, a);
+        final int top = mHeight - mBufHeight;
+        if (n > 0)
+            callOnScroll(
+                    MathUtils.clamp(from, top, mHeight - 1),
+                    MathUtils.clamp(to, top, mHeight - 1),
+                    n);
+    }
+
+    // the whole buffer in both directions (including history)
+    private void scroll(final int n, final int a) {
+        final boolean init = mBuffer.size() == 0; // more general calculation is not required here
+        mBuffer.scroll(n, a);
+        final int top = mHeight - mBufHeight;
+        if ((!init) && (n != 0)) {
+            if (n < 0) callOnScroll(mHeight - 1, top, -n);
+            else callOnScroll(top, mHeight - 1, n);
+        }
     }
 
     private int moveScrollPosY(final int from, final int len) {

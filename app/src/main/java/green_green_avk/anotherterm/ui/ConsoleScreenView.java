@@ -38,7 +38,8 @@ import green_green_avk.anotherterm.R;
 import green_green_avk.anotherterm.utils.CharsAutoSelector;
 import green_green_avk.anotherterm.utils.WeakHandler;
 
-public class ConsoleScreenView extends ScrollableView implements ConsoleInput.OnInvalidateSink {
+public class ConsoleScreenView extends ScrollableView
+        implements ConsoleInput.OnInvalidateSink, ConsoleInput.OnBufferScroll {
 
     public static class State {
         private PointF scrollPosition = null;
@@ -211,12 +212,14 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     public ConsoleScreenView(final Context context, final AttributeSet attrs,
                              final int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        appTextScroller = new ScrollerEx(context);
         init(context, attrs, defStyleAttr, R.style.AppConsoleScreenViewStyle);
     }
 
     public ConsoleScreenView(final Context context, final AttributeSet attrs,
                              final int defStyleAttr, final int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
+        appTextScroller = new ScrollerEx(context);
         init(context, attrs, defStyleAttr, defStyleRes);
     }
 
@@ -316,7 +319,7 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         super.onAttachedToWindow();
         mHandler = new WeakHandler() {
             @Override
-            public void handleMessage(Message msg) {
+            public void handleMessage(final Message msg) {
                 switch (msg.what) {
                     case MSG_BLINK:
                         mBlinkState = !mBlinkState;
@@ -593,6 +596,10 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     public void computeScroll() {
         super.computeScroll();
         adjustSelectionPopup();
+        if (appTextScroller.computeScrollOffset() &&
+                consoleInput != null && consoleInput.consoleOutput != null) {
+            consoleInput.consoleOutput.vScroll(appTextScroller.getDistanceY());
+        }
     }
 
     public void applyCharAttrs() {
@@ -615,10 +622,12 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
     public void setConsoleInput(@NonNull final ConsoleInput consoleInput) {
         this.consoleInput = consoleInput;
         this.consoleInput.addOnInvalidateSink(this);
+        this.consoleInput.addOnBufferScroll(this);
         resizeBuffer();
     }
 
     public void unsetConsoleInput() {
+        consoleInput.removeOnBufferScroll(this);
         consoleInput.removeOnInvalidateSink(this);
         consoleInput = null;
     }
@@ -713,6 +722,8 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         final int action = event.getAction();
         if (action == MotionEvent.ACTION_DOWN) {
             inGesture = true;
+            wasAppTextScrolling = !appTextScroller.isFinished();
+            appTextScroller.forceFinished(true);
             adjustSelectionPopup();
         }
         if (selectionMode) {
@@ -804,7 +815,18 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
         return super.onGenericMotionEvent(event);
     }
 
-    private float prevVScrollPos = 0;
+    private float prevAppTextVScrollPos = 0;
+
+    private int getNextAppTextY(final float dY) {
+        prevAppTextVScrollPos += dY;
+        final int lines = (int) prevAppTextVScrollPos;
+        prevAppTextVScrollPos -= lines;
+        return lines;
+    }
+
+    final private ScrollerEx appTextScroller;
+
+    private boolean wasAppTextScrolling = false;
 
     @Override
     public boolean onScroll(final MotionEvent e1, final MotionEvent e2,
@@ -827,17 +849,42 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
             ViewCompat.postInvalidateOnAnimation(this);
             return true;
         }
-        if (isMouseSupported() && consoleInput.isAltBuf()) {
-            prevVScrollPos += distanceY / scrollScale.y;
-            final int lines = (int) prevVScrollPos;
-            prevVScrollPos -= lines;
-            consoleInput.consoleOutput.vScroll(lines);
+        if (consoleInput != null && consoleInput.consoleOutput != null &&
+                consoleInput.isAltBuf() && getRows() >= consoleInput.currScrBuf.getHeight()) {
+            if (scrollPosition.y != 0) {
+                scrollPosition.y = 0;
+                ViewCompat.postInvalidateOnAnimation(this);
+            }
+            consoleInput.consoleOutput.vScroll(getNextAppTextY(distanceY / scrollScale.y));
+            return super.onScroll(e1, e2, distanceX, 0);
         }
         return super.onScroll(e1, e2, distanceX, distanceY);
     }
 
     @Override
+    public boolean onFling(final MotionEvent e1, final MotionEvent e2,
+                           final float velocityX, final float velocityY) {
+        if (selectionMode && selectionMarker != null) {
+            // TODO: Specific on fling behavior... Maybe...
+            return true;
+        }
+        if (consoleInput != null && consoleInput.consoleOutput != null &&
+                consoleInput.isAltBuf() && getRows() >= consoleInput.currScrBuf.getHeight()) {
+            if (scrollPosition.y != 0) {
+                scrollPosition.y = 0;
+                ViewCompat.postInvalidateOnAnimation(this);
+            }
+            appTextScroller.forceFinished(true);
+            appTextScroller.fling(0, -(int) (velocityY / scrollScale.y));
+            return super.onFling(e1, e2, velocityX, 0);
+        }
+        return super.onFling(e1, e2, velocityX, velocityY);
+    }
+
+    @Override
     public boolean onSingleTapUp(final MotionEvent e) {
+        if (wasAppTextScrolling)
+            return true; // Just stop sending fling scrolling escapes to an application...
         if (selectionMode && selectionMarker != null) {
             if (!isOnScreen(selectionMarker.x, selectionMarker.y))
                 doScrollTextCenterTo(selectionMarker.x, selectionMarker.y);
@@ -871,6 +918,64 @@ public class ConsoleScreenView extends ScrollableView implements ConsoleInput.On
                 selection.last.set(bb[1], py);
                 getCenterText(selection.first.x, selection.first.y, selectionMarkerFirst);
                 getCenterText(selection.last.x, selection.last.y, selectionMarkerLast);
+            }
+        }
+    }
+
+    protected boolean scrollPtWithBuffer(@NonNull final Point pt,
+                                         final int from, final int to, final int n) {
+        if (pt.y >= from && pt.y <= to) {
+            pt.y -= n;
+            if (pt.y < from) {
+                pt.y = from;
+                return true;
+            }
+            return false;
+        }
+        if (pt.y <= from && pt.y >= to) {
+            pt.y += n;
+            if (pt.y > from) {
+                pt.y = from;
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
+    protected boolean scrollPtWithBuffer(@NonNull final PointF pt,
+                                         final int from, final int to, final int n) {
+        if (pt.y >= from && pt.y < to + 1) {
+            pt.y -= n;
+            if (pt.y < from) {
+                pt.y += Math.ceil(from - pt.y);
+                return true;
+            }
+            return false;
+        }
+        if (pt.y < from + 1 && pt.y >= to) {
+            pt.y += n;
+            if (pt.y >= from + 1) {
+                pt.y += Math.ceil(from - pt.y);
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
+    @Override
+    public void onBufferScroll(final int from, final int to, final int n) {
+        if (selection != null) {
+            final boolean fob = scrollPtWithBuffer(selection.first, from, to, n);
+            final boolean lob = scrollPtWithBuffer(selection.last, from, to, n);
+            if (fob && lob) {
+                setSelectionMode(false);
+                selection = null;
+            } else {
+                scrollPtWithBuffer(selectionMarkerFirst, from, to, n);
+                scrollPtWithBuffer(selectionMarkerLast, from, to, n);
+                scrollPtWithBuffer(selectionMarkerExpr, from, to, n);
             }
         }
     }
