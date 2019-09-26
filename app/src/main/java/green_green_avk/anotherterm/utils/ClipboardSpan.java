@@ -11,7 +11,7 @@ import android.widget.Toast;
 import green_green_avk.anotherterm.R;
 
 public final class ClipboardSpan extends ClickableSpan {
-    final String content;
+    public final String content;
 
     public ClipboardSpan(@NonNull final String content) {
         super();
