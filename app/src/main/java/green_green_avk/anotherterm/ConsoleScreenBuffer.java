@@ -266,7 +266,7 @@ public final class ConsoleScreenBuffer {
         final int top = Math.max(0, mMargins.top);
         final int bottom = Math.min(mHeight - 1, mMargins.bottom);
         if (from >= top && r < top) {
-            scroll(mMargins.bottom, mMargins.top, top - r, currentAttrs);
+            scroll(mMargins.bottom, top, top - r, currentAttrs);
             r = top;
         } else if (from <= bottom && r > bottom) {
             scroll(mMargins.top, mMargins.bottom, r - bottom, currentAttrs);
