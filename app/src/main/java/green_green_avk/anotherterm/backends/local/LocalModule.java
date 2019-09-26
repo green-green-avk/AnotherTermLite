@@ -125,8 +125,10 @@ public final class LocalModule extends BackendModule {
         if (Build.VERSION.SDK_INT >= 24)
             env.put("PROTECTED_DATA_DIR", context.getApplicationInfo().deviceProtectedDataDir);
         final File extDataDir = context.getExternalFilesDir(null);
-        if (extDataDir != null)
+        if (extDataDir != null) {
             env.put("EXTERNAL_DATA_DIR", extDataDir.getAbsolutePath());
+            env.put("SHARED_DATA_DIR", extDataDir.getAbsolutePath());
+        }
         env.put("LIB_DIR", context.getApplicationInfo().nativeLibraryDir);
         env.put("APP_ID", BuildConfig.APPLICATION_ID);
         synchronized (connectionLock) {
