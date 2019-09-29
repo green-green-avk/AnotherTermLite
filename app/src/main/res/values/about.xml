@@ -12,11 +12,9 @@
 <ulc>
 <lic>Minimum supported Android version is 4.0 Ice Cream Sandwich.</lic>
 <lic>Supported USB UART devices: Generic USB CDC, CP210X, FTDI, PL2303, CH34x, CP2130 SPI-USB.</lic>
-<lic>Local Linux pty is supported. Feel free to follow directions from
-<a href="http://kevinboone.net/android_nonroot.html">
-<i>Using standard Linux utilities in a stock, non-rooted Android device</i> by Kevin Boone</a> and
-<a href="https://github.com/green-green-avk/build-proot-android/tree/master/packages">
-especially compiled PRoot</a>. ;)</lic>
+<lic>Local Linux pty is supported. Feel free to use
+<a href="https://github.com/green-green-avk/build-proot-android/blob/master/README.md">
+PRoot</a> with some Linux environment.</lic>
 <lic>Shell tool to interact with the Android environment is also present.
 <ulc>
 <lic>Content exchange between other applications and own files / pipes has been implemented.</lic>

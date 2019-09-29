@@ -20,12 +20,8 @@ Features:
 
 * Supported USB UART devices: Generic USB CDC, CP210X, FTDI, PL2303, CH34x, CP2130 SPI-USB.
 
-* Local Linux pty (aka terminal emulator) is supported. Feel free to follow directions from
-http://kevinboone.net/android_nonroot.html
-"Using standard Linux utilities in a stock, non-rooted Android device"
-by Kevin Boone and
-https://github.com/green-green-avk/build-proot-android/tree/master/packages
-especially compiled PRoot. ;)
+* Local Linux pty is supported. Feel free to use PRoot with some Linux environment:
+https://github.com/green-green-avk/build-proot-android/blob/master/README.md .
 
 * Shell tool to interact with the Android environment is also present.
    - Content exchange between other applications and own files / pipes has been implemented.
