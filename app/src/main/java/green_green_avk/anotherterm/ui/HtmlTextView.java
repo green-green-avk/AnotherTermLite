@@ -2,11 +2,11 @@ package green_green_avk.anotherterm.ui;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.support.v4.text.HtmlCompat;
 import android.text.method.LinkMovementMethod;
 import android.util.AttributeSet;
 
 import green_green_avk.anotherterm.R;
-import green_green_avk.anotherterm.utils.CustomHtml;
 import green_green_avk.anotherterm.utils.XmlToSpanned;
 
 public class HtmlTextView extends android.support.v7.widget.AppCompatTextView {
@@ -40,7 +40,7 @@ public class HtmlTextView extends android.support.v7.widget.AppCompatTextView {
             // https://blog.uncommon.is/a-better-way-to-handle-links-in-textview-27bb70b2d31c ?
             // https://github.com/saket/Better-Link-Movement-Method ?
             setMovementMethod(LinkMovementMethod.getInstance());
-            setText(CustomHtml.fromHtml(htmlText, getContext()));
+            setText(HtmlCompat.fromHtml(htmlText, HtmlCompat.FROM_HTML_MODE_LEGACY));
         }
     }
 
