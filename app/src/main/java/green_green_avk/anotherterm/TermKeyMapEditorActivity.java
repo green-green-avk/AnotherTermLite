@@ -179,6 +179,7 @@ public final class TermKeyMapEditorActivity extends AppCompatActivity {
     }
 
     public void info(View v) {
-        startActivity(new Intent(this, InfoActivity.class).setData(Uri.parse("infores:keymap_escapes")));
+        startActivity(new Intent(this, InfoActivity.class)
+                .setData(Uri.parse("info://local/keymap_escapes")));
     }
 }

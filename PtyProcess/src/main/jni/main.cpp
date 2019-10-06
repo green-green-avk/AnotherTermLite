@@ -24,6 +24,7 @@ static jclass g_OOMEC;
 static jclass g_runtimeEC;
 static jclass g_IOEC;
 static jclass g_IntIOEC;
+static jclass g_illegalArgumentEC;
 
 class cStrError {
 private:
@@ -178,14 +179,18 @@ static void JNICALL m_resize(JNIEnv *const env, const jobject jthis,
                              const jint w, const jint h, const jint wp, const jint hp) {
     const jint fdPtm = env->GetIntField(jthis, g_fdPtmId);
     if (env->ExceptionCheck() == JNI_TRUE) return;
-    if (fdPtm < 0) return;
-    struct winsize winp = {
+    if (fdPtm < 0) {
+        env->ThrowNew(g_IOEC, "fd < 0");
+        return;
+    }
+    const struct winsize winp = {
             .ws_col = (unsigned short) w,
             .ws_row = (unsigned short) h,
             .ws_xpixel = (unsigned short) wp,
             .ws_ypixel = (unsigned short) hp
     };
-    ioctl(fdPtm, TIOCSWINSZ, &winp);
+    if (ioctl(fdPtm, TIOCSWINSZ, &winp) != 0)
+        env->ThrowNew(g_IOEC, strError("Cannot set pty size"));
 }
 
 static jint JNICALL m_readByte(JNIEnv *const env, const jobject jthis) {
@@ -277,6 +282,36 @@ static jboolean JNICALL m_isatty(JNIEnv *const env, const jobject jthis, const j
     return (jboolean) (isatty(fd) ? JNI_TRUE : JNI_FALSE);
 }
 
+static void JNICALL m_getSize(JNIEnv *const env, const jobject jthis,
+                              const jint fd, const jintArray result) {
+    if (result == nullptr) {
+        env->ThrowNew(g_illegalArgumentEC, "Result array must not be null");
+        return;
+    }
+    const jsize l = env->GetArrayLength(result);
+    if (env->ExceptionCheck() == JNI_TRUE) return;
+    if (l < 4) {
+        env->ThrowNew(g_illegalArgumentEC, "Result array must be at least 4 elements long");
+        return;
+    }
+    if (fd < 0) {
+        env->ThrowNew(g_IOEC, "fd < 0");
+        return;
+    }
+    struct winsize winp = {0, 0, 0, 0};
+    if (ioctl(fd, TIOCGWINSZ, &winp) != 0) {
+        env->ThrowNew(g_IOEC, strError("Cannot get pty size"));
+        return;
+    }
+    jint *const res = (jint *const) env->GetPrimitiveArrayCritical(result, nullptr);
+    if (env->ExceptionCheck() == JNI_TRUE) return;
+    res[0] = winp.ws_col;
+    res[1] = winp.ws_row;
+    res[2] = winp.ws_xpixel;
+    res[3] = winp.ws_ypixel;
+    env->ReleasePrimitiveArrayCritical(result, res, 0);
+}
+
 static jlong JNICALL m_getArgMax(JNIEnv *const env, const jobject jthis) {
     return sysconf(_SC_ARG_MAX);
 }
@@ -293,6 +328,7 @@ static const JNINativeMethod methodTable[] = {
         {"writeBuf",               "([BII)V", (void *) m_writeBuf},
         {"pollForRead",            "(II)Z",   (void *) m_pollForRead},
         {"isatty",                 "(I)Z",    (void *) m_isatty},
+        {"getSize",                "(I[I)V",  (void *) m_getSize},
         {"getArgMax",              "()J",     (void *) m_getArgMax}
 };
 
@@ -310,6 +346,9 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *const vm, void *const reserved) {
     g_IOEC = (jclass) env->NewGlobalRef(env->FindClass("java/io/IOException"));
     if (env->ExceptionCheck() == JNI_TRUE) return -1;
     g_IntIOEC = (jclass) env->NewGlobalRef(env->FindClass("java/io/InterruptedIOException"));
+    if (env->ExceptionCheck() == JNI_TRUE) return -1;
+    g_illegalArgumentEC = (jclass) env->NewGlobalRef(
+            env->FindClass("java/lang/IllegalArgumentException"));
     if (env->ExceptionCheck() == JNI_TRUE) return -1;
 
     g_class = (jclass) env->NewGlobalRef(env->FindClass(CLASS_NAME));
@@ -333,6 +372,7 @@ JNIEXPORT void JNI_OnUnload(JavaVM *const vm, void *const reserved) {
 
     env->DeleteGlobalRef(g_class);
 
+    env->DeleteGlobalRef(g_illegalArgumentEC);
     env->DeleteGlobalRef(g_IntIOEC);
     env->DeleteGlobalRef(g_IOEC);
     env->DeleteGlobalRef(g_runtimeEC);

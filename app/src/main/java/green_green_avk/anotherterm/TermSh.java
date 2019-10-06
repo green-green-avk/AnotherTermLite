@@ -23,6 +23,7 @@ import android.support.annotation.UiThread;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.FileProvider;
+import android.support.v4.math.MathUtils;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
@@ -53,6 +54,7 @@ import green_green_avk.anotherterm.utils.BinaryGetOpts;
 import green_green_avk.anotherterm.utils.BlockingSync;
 import green_green_avk.anotherterm.utils.ChrootedFile;
 import green_green_avk.anotherterm.utils.Misc;
+import green_green_avk.anotherterm.utils.XmlToAnsi;
 import green_green_avk.ptyprocess.PtyProcess;
 
 public final class TermSh {
@@ -347,7 +349,7 @@ public final class TermSh {
             private static FileOutputStream wrapOutputFD(final FileDescriptor fd) {
                 try {
                     final ParcelFileDescriptor pfd = wrapFD(fd);
-                    return new ParcelFileDescriptor.AutoCloseOutputStream(pfd);
+                    return new PtyProcess.PfdFileOutputStream(pfd);
                 } catch (final IOException e) {
                     Log.e("TermShServer", "Request", e);
                 }
@@ -423,7 +425,8 @@ public final class TermSh {
                     final byte result = dis.readByte();
                     if (result == 0) {
                         final FileDescriptor[] fds = socket.getAncillaryFileDescriptors();
-                        if (fds.length != 1) throw new ParseException("Invalid descriptors");
+                        if (fds.length != 1)
+                            throw new ParseException("Invalid descriptors received");
                         return wrapFD(fds[0]);
                     }
                     errno = dis.readInt();
@@ -531,9 +534,34 @@ public final class TermSh {
             }
         }
 
-        private void printHelp(final OutputStream output) throws IOException {
-            output.write(Misc.toUTF8(ui.ctx.getString(
-                    R.string.desc_termsh_help)));
+        private void printHelp(@NonNull final OutputStream output) throws IOException {
+            if (output instanceof PtyProcess.PfdFileOutputStream) {
+                printHelp(output, ((PtyProcess.PfdFileOutputStream) output).pfd.getFd());
+                return;
+            }
+            throw new IllegalArgumentException("Unsupported stream type");
+        }
+
+        private void printHelp(@NonNull final OutputStream output,
+                               @NonNull final ShellCmdIO shellCmd) throws IOException {
+            // Any of the standard pipes can be redirected; using controlling terminal by itself
+            final ParcelFileDescriptor pfd = shellCmd.open("/dev/tty", PtyProcess.O_RDWR);
+            try {
+                printHelp(output, pfd.getFd());
+            } finally {
+                pfd.close();
+            }
+        }
+
+        private void printHelp(@NonNull final OutputStream output,
+                               final int ctfd) throws IOException {
+            final XmlToAnsi hp = new XmlToAnsi(ui.ctx.getString(R.string.desc_termsh_help));
+            final int[] size = new int[4];
+            PtyProcess.getSize(ctfd, size);
+            hp.width = MathUtils.clamp(size[0], 20, 140);
+            hp.indentStep = hp.width / 20;
+            for (final String s : hp)
+                output.write(Misc.toUTF8(s));
         }
 
         @SuppressLint("StaticFieldLeak")
@@ -560,7 +588,7 @@ public final class TermSh {
                     final String command = Misc.fromUTF8(shellCmd.args[0]);
                     switch (command) {
                         case "help":
-                            printHelp(shellCmd.stdOut);
+                            printHelp(shellCmd.stdOut, shellCmd);
                             break;
                         case "notify": {
                             final BinaryGetOpts.Parser ap = new BinaryGetOpts.Parser(shellCmd.args);
@@ -1058,7 +1086,7 @@ public final class TermSh {
                         ParseException | ArgsException | BinaryGetOpts.ParseException e) {
                     try {
                         if (e instanceof ArgsException) {
-                            printHelp(shellCmd.stdErr);
+                            printHelp(shellCmd.stdErr, shellCmd);
                         }
                         shellCmd.stdErr.write(Misc.toUTF8(e.getMessage() + "\n"));
                         shellCmd.exit(1);

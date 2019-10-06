@@ -31,7 +31,7 @@
                 android:layout_height="wrap_content"
                 android:textIsSelectable="true"
                 android:textSize="18sp"
-                app:htmlText="@string/desc_doze" />
+                app:xmlText="@string/desc_doze" />
         </ScrollView>
 
     </FrameLayout>

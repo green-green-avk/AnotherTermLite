@@ -121,7 +121,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="infores" />
+                <data
+                    android:scheme="info"
+                    android:host="${applicationId}" />
             </intent-filter>
         </activity>
     </application>

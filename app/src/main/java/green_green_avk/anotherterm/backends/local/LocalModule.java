@@ -162,7 +162,10 @@ public final class LocalModule extends BackendModule {
 
     @Override
     public void resize(final int col, final int row, final int wp, final int hp) {
-        proc.resize(col, row, wp, hp);
+        try {
+            proc.resize(col, row, wp, hp);
+        } catch (final IOException ignored) {
+        }
     }
 
     @NonNull

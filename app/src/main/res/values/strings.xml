@@ -26,11 +26,11 @@
         turn off the battery optimization for this application
         in the Battery Optimization Settings.</p>
         <p><b>Warning: </b>Battery usage could be increased significantly.</p>
-        <br>
+        <br/>
         <p><b>Details:</b></p>
         <ul>
-            <li><a href="https://tamingthedroid.com/battery-optimization-doze-mode">https://tamingthedroid.com/battery-optimization-doze-mode</a></li>
-            <li><a href="https://developer.android.com/training/monitoring-device-state/doze-standby">https://developer.android.com/training/monitoring-device-state/doze-standby</a></li>
+            <li><a href=\"https://tamingthedroid.com/battery-optimization-doze-mode\">https://tamingthedroid.com/battery-optimization-doze-mode</a></li>
+            <li><a href=\"https://developer.android.com/training/monitoring-device-state/doze-standby\">https://developer.android.com/training/monitoring-device-state/doze-standby</a></li>
         </ul>
     ]]></string>
     <string name="battery_optimization_settings">Battery Optimization Settings</string>
@@ -72,13 +72,14 @@
     <string name="title_info">Info</string>
     <string name="desc_not_found"><![CDATA[<h1>Not Found</h1>]]></string>
     <string name="desc_local_param_execute"><![CDATA[
-        If the field is empty, <b>`/system/bin/sh -l\'</b> will be executed;<br>
-        <b>`/system/bin/sh -l -c &lt;command&gt;\'</b> otherwise.
+        <p>If the field is empty, <code>/system/bin/sh -l</code> will be executed;<br/>
+        <code>/system/bin/sh -l -c &lt;command&gt;</code> otherwise.</p>
         <p>Commands:
         <ul>
         <li><clipboard>$LIB_DIR/libtermsh.so</clipboard> &#x2014; a tool to use Android
         functionality from the shell.
-        Use `help\' argument for <a href="infores:termsh_man">details</a>.</li>
+        Run with <code>help</code> command for
+        <a href=\"info://green_green_avk.anothertermlite/termsh_man\">details</a>.</li>
         </ul></p>
         <p>Environment variables:
         <ul>
@@ -90,10 +91,12 @@
         where the application can place persistent files it owns
         (set if available)</li>
         <li><clipboard>EXTERNAL_DATA_DIR</clipboard> &#x2014;
-        an alias to <clipboard>SHARED_DATA_DIR</clipboard>&nbsp;</li>
+        an alias to <clipboard>SHARED_DATA_DIR</clipboard></li>
+        <li><clipboard>PUBLIC_DATA_DIR</clipboard> &#x2014;
+        the primary shared/external storage directory (set if available)</li>
         <li><clipboard>LIB_DIR</clipboard> &#x2014; native binaries path</li>
         <li><clipboard>APP_ID</clipboard> &#x2014; application id</li>
-        <ul/></p>
+        </ul></p>
     ]]></string>
     <string name="example_local_param_execute">export TERMSH=\"$LIB_DIR/libtermsh.so\" ; cd $DATA_DIR ; sh</string>
     <string name="conntype_telnet">Telnet</string>

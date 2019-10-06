@@ -267,7 +267,7 @@ public final class PtyProcess extends Process {
     public native void sendSignalToForeground(int signal);
 
     @Keep
-    public native void resize(int width, int height, int widthPx, int heightPx);
+    public native void resize(int width, int height, int widthPx, int heightPx) throws IOException;
 
     // TODO: Or ParcelFileDescriptor / File Streams?
 
@@ -320,7 +320,7 @@ public final class PtyProcess extends Process {
             extends ParcelFileDescriptor.AutoCloseInputStream {
         private volatile boolean closed = false;
         private final ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
-        private final ParcelFileDescriptor pfd;
+        public final ParcelFileDescriptor pfd;
 
         public InterruptableFileInputStream(final ParcelFileDescriptor pfd) throws IOException {
             super(pfd);
@@ -387,10 +387,28 @@ public final class PtyProcess extends Process {
         }
     }
 
+    public static final class PfdFileOutputStream
+            extends ParcelFileDescriptor.AutoCloseOutputStream {
+        public final ParcelFileDescriptor pfd;
+
+        public PfdFileOutputStream(final ParcelFileDescriptor pfd) {
+            super(pfd);
+            this.pfd = pfd;
+        }
+    }
+
     public static boolean isatty(final InputStream s) {
         if (s instanceof InterruptableFileInputStream)
             return isatty(((InterruptableFileInputStream) s).pfd.getFd());
-        throw new IllegalArgumentException("Unsupported stream");
+        throw new IllegalArgumentException("Unsupported stream type");
+    }
+
+    public static void getSize(final OutputStream s, @NonNull int[] result) throws IOException {
+        if (s instanceof PfdFileOutputStream) {
+            getSize(((PfdFileOutputStream) s).pfd.getFd(), result);
+            return;
+        }
+        throw new IllegalArgumentException("Unsupported stream type");
     }
 
     @NonNull
@@ -405,6 +423,9 @@ public final class PtyProcess extends Process {
 
     @Keep
     public static native boolean isatty(int fd);
+
+    @Keep
+    public static native void getSize(int fd, @NonNull int[] result) throws IOException;
 
     @Keep
     public static native long getArgMax();

@@ -54,6 +54,6 @@
         android:layout_marginLeft="@dimen/text_margin"
         android:layout_marginRight="@dimen/text_margin"
         android:textStyle="italic"
-        app:htmlText="@string/desc_local_param_execute" />
+        app:xmlText="@string/desc_local_param_execute" />
 
 </LinearLayout>

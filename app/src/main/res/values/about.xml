@@ -3,36 +3,36 @@
 <string name="desc_about"><![CDATA[
 <h1>Introduction</h1>
 <p>Why another one? Just to have:</p>
-<ulc>
-    <lic>Local pty, USB UART etc. support in the same application;</lic>
-    <lic>Adequate screen input methods as long as a terminal requires specific keyboard
-    functions.</lic>
-</ulc>
+<ul>
+    <li>Local pty, USB UART etc. support in the same application;</li>
+    <li>Adequate screen input methods as long as a terminal requires specific keyboard
+    functions.</li>
+</ul>
 <h1>Features</h1>
-<ulc>
-<lic>Minimum supported Android version is 4.0 Ice Cream Sandwich.</lic>
-<lic>Supported USB UART devices: Generic USB CDC, CP210X, FTDI, PL2303, CH34x, CP2130 SPI-USB.</lic>
-<lic>Local Linux pty is supported. Feel free to use
-<a href="https://github.com/green-green-avk/build-proot-android/blob/master/README.md">
-PRoot</a> with some Linux environment.</lic>
-<lic>Shell tool to interact with the Android environment is also present.
-<ulc>
-<lic>Content exchange between other applications and own files / pipes has been implemented.</lic>
-<lic>It also works in chrooted environments (PRoot at least).</lic>
-<lic>USB serial port dongle access from the command line is also implemented.</lic>
-</ulc>
-</lic>
-<lic>Telnet (no encryption).</lic>
-<lic>No SSH in the Lite version.</lic>
-<lic>And no MoSH.</lic>
-<lic>Builtin screen keyboard and mouse.</lic>
-<lic>Different charsets and customizable key mapping support.</lic>
-</ulc>
+<ul>
+<li>Minimum supported Android version is 4.0 Ice Cream Sandwich.</li>
+<li>Supported USB UART devices: Generic USB CDC, CP210X, FTDI, PL2303, CH34x, CP2130 SPI-USB.</li>
+<li>Local Linux pty is supported. Feel free to use
+<a href=\"https://github.com/green-green-avk/build-proot-android/blob/master/README.md\">
+PRoot</a> with some Linux environment.</li>
+<li>Shell tool to interact with the Android environment is also present.
+<ul>
+<li>Content exchange between other applications and own files / pipes has been implemented.</li>
+<li>It also works in chrooted environments (PRoot at least).</li>
+<li>USB serial port dongle access from the command line is also implemented.</li>
+</ul>
+</li>
+<li>Telnet (no encryption).</li>
+<li>No SSH in the Lite version.</li>
+<li>And no MoSH.</li>
+<li>Builtin screen keyboard and mouse.</li>
+<li>Different charsets and customizable key mapping support.</li>
+</ul>
 <h1>Links</h1>
-<ulc>
-<lic><a href="https://github.com/green-green-avk/AnotherTermLite/wiki">Wiki</a></lic>
-<lic><a href="https://github.com/green-green-avk/AnotherTermLite">Source at GitHub</a></lic>
-</ulc>
+<ul>
+<li><a href=\"https://github.com/green-green-avk/AnotherTermLite/wiki\">Wiki</a></li>
+<li><a href=\"https://github.com/green-green-avk/AnotherTermLite\">Source at GitHub</a></li>
+</ul>
 <h1>Notes</h1>
 <p>Please, be aware, that key mapping of hardware input devices is provided by device vendors
 and it could make some troubles.
@@ -47,16 +47,16 @@ The only way to change the vendor\'s mapping is to root your device and change a
 manually.</p>
 <p>Due to an USB bug in Android itself, it\'s highly recommended not to use the USB UART
 with devices running Android 5.1.1 Lollipop.
-See <a href="https://github.com/felHR85/UsbSerial/issues/142">this issue</a> for more details.</p>
+See <a href=\"https://github.com/felHR85/UsbSerial/issues/142\">this issue</a> for more details.</p>
 <h1>Credits</h1>
 <p>Thanks to:</p>
-<ulc>
-    <lic><a href="https://github.com/felHR85">felHR85</a> and other contributors for
-    <a href="https://github.com/felHR85/UsbSerial">UsbSerial</a> library
-    (<a href="https://github.com/felHR85/UsbSerial/blob/master/LICENSE">license</a>);</lic>
-    <lic>Creators of
-    <a href="https://www.fontsquirrel.com/fonts/dejavu-sans-mono">DejaVu Sans Mono</a> font
-    (<a href="https://www.fontsquirrel.com/license/dejavu-sans-mono">license</a>).</lic>
-</ulc>
+<ul>
+    <li><a href=\"https://github.com/felHR85\">felHR85</a> and other contributors for
+    <a href=\"https://github.com/felHR85/UsbSerial\">UsbSerial</a> library
+    (<a href=\"https://github.com/felHR85/UsbSerial/blob/master/LICENSE\">license</a>);</li>
+    <li>Creators of
+    <a href=\"https://www.fontsquirrel.com/fonts/dejavu-sans-mono\">DejaVu Sans Mono</a> font
+    (<a href=\"https://www.fontsquirrel.com/license/dejavu-sans-mono\">license</a>).</li>
+</ul>
 ]]></string>
 </resources>

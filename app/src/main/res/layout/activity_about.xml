@@ -63,7 +63,7 @@
                 android:layout_height="wrap_content"
                 android:padding="@dimen/text_padding"
                 android:textIsSelectable="true"
-                app:htmlText="@string/desc_about" />
+                app:xmlText="@string/desc_about" />
 
             <LinearLayout
                 android:layout_width="match_parent"

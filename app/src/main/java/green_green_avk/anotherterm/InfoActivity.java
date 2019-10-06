@@ -14,7 +14,7 @@ import green_green_avk.anotherterm.ui.HtmlTextView;
 public final class InfoActivity extends AppCompatActivity {
 
     private static final class Source {
-        private enum Type {HTML, PLAIN}
+        private enum Type {XML, HTML, PLAIN}
 
         private final int id;
         private final Type type;
@@ -28,8 +28,8 @@ public final class InfoActivity extends AppCompatActivity {
     private static final Map<String, Source> res = new HashMap<>();
 
     static {
-        res.put("keymap_escapes", new Source(R.string.desc_keymap_escapes, Source.Type.HTML));
-        res.put("termsh_man", new Source(R.string.desc_termsh_help, Source.Type.PLAIN));
+        res.put("/keymap_escapes", new Source(R.string.desc_keymap_escapes, Source.Type.XML));
+        res.put("/termsh_man", new Source(R.string.desc_termsh_help, Source.Type.XML));
     }
 
     @Override
@@ -40,14 +40,20 @@ public final class InfoActivity extends AppCompatActivity {
         final HtmlTextView v = findViewById(R.id.desc);
         final Uri uri = getIntent().getData();
         if (uri != null) {
-            if ("infores".equals(uri.getScheme())) {
-                final Source source = res.get(uri.getSchemeSpecificPart());
+            if ("info".equals(uri.getScheme())) {
+                final Source source = res.get(uri.getPath());
                 if (source == null) return;
-                if (source.type == Source.Type.PLAIN) {
-                    v.setTypeface(Typeface.MONOSPACE);
-                    v.setText(source.id);
-                } else
-                    v.setHtmlText(getString(source.id));
+                switch (source.type) {
+                    case XML:
+                        v.setXmlText(getString(source.id));
+                        break;
+                    case HTML:
+                        v.setHtmlText(getString(source.id));
+                        break;
+                    default:
+                        v.setTypeface(Typeface.MONOSPACE);
+                        v.setText(source.id);
+                }
             }
         }
     }

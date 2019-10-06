@@ -1,10 +1,15 @@
 package green_green_avk.anotherterm.utils;
 
+import android.graphics.Typeface;
+import android.support.annotation.NonNull;
 import android.text.Editable;
 import android.text.Html;
 import android.text.Spanned;
+import android.text.style.BackgroundColorSpan;
 import android.text.style.BulletSpan;
 import android.text.style.LeadingMarginSpan;
+import android.text.style.StyleSpan;
+import android.text.style.TypefaceSpan;
 
 import org.xml.sax.XMLReader;
 
@@ -18,8 +23,31 @@ import java.util.Stack;
 public final class CompatHtmlTagHandler implements Html.TagHandler {
 
     private final Stack<Object> lists = new Stack<>();
-    private final Stack<LeadingMarginSpan> lis = new Stack<>();
-    private int cbtStart = 0;
+    private final Stack<Object> spans = new Stack<>();
+
+    private void startNullSpan() {
+        spans.push(null);
+    }
+
+    private void startSpan(@NonNull final Editable output, @NonNull final Object span, final int pos) {
+        output.setSpan(span, pos, pos, Spanned.SPAN_MARK_MARK);
+        spans.push(span);
+    }
+
+    private Object endSpan(@NonNull final Editable output, final int pos) {
+        final Object span = spans.pop();
+        if (span != null) {
+            final int start = output.getSpanStart(span);
+            if (pos > start) output.setSpan(span, start, pos, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            else output.removeSpan(span);
+        }
+        return span;
+    }
+
+    private void startParagraph(@NonNull final Editable output) {
+        if (output.length() > 0 && output.charAt(output.length() - 1) != '\n')
+            output.append("\n\n");
+    }
 
     @Override
     public void handleTag(final boolean opening, String tag,
@@ -27,66 +55,86 @@ public final class CompatHtmlTagHandler implements Html.TagHandler {
         tag = tag.toLowerCase();
         if (opening) {
             switch (tag) {
+                case "code":
+                    startSpan(output, new TypefaceSpan("monospace"), output.length());
+                    startSpan(output, new BackgroundColorSpan(0x40808080), output.length());
+                    break;
                 case "lic":
                 case "li": {
-                    if (output.length() > 0 && output.charAt(output.length() - 1) != '\n') {
-                        output.append("\n\n");
+                    startParagraph(output);
+                    Object list = null;
+                    if (!lists.empty() && (list = lists.peek()) instanceof Integer) {
+                        output.append(list.toString()).append(") ");
+                        lists.pop();
+                        lists.push((int) list + 1);
+                        startNullSpan();
+                    } else if (list instanceof Character && list.equals('*')) {
+                        startSpan(output, new BulletSpan(15), output.length());
+                    } else {
+                        startNullSpan();
                     }
-                    final int pos = output.length();
-                    final LeadingMarginSpan span = new LeadingMarginSpan.Standard(15);
-                    output.setSpan(span, pos, pos, Spanned.SPAN_MARK_MARK);
-                    lis.push(span);
+                    break;
+                }
+                case "dt":
+                    startParagraph(output);
+                    startSpan(output, new StyleSpan(Typeface.BOLD), output.length());
+                    break;
+                case "dd":
+                    startParagraph(output);
+                    startSpan(output, new LeadingMarginSpan.Standard(15), output.length());
+                    break;
+                case "dl": {
+                    startParagraph(output);
+                    startSpan(output, new LeadingMarginSpan.Standard(15), output.length());
+                    lists.push(null);
                     break;
                 }
                 case "ulc":
-                case "ul":
-                    lists.push(null);
+                case "ul": {
+                    startParagraph(output);
+                    startSpan(output, new LeadingMarginSpan.Standard(15), output.length());
+                    lists.push('*');
                     break;
+                }
                 case "olc":
-                case "ol":
+                case "ol": {
+                    startParagraph(output);
+                    startSpan(output, new LeadingMarginSpan.Standard(15), output.length());
                     lists.push(1);
                     break;
+                }
                 case "clipboard":
-                    cbtStart = output.length();
+                    startSpan(output, new ClipboardSpan(), output.length());
                     break;
             }
         } else {
             switch (tag) {
-                case "lic":
-                case "li": {
-                    if (lis.empty()) break;
-                    if (output.length() > 0 && output.charAt(output.length() - 1) != '\n') {
-                        output.append("\n\n");
-                    }
-                    final LeadingMarginSpan span = lis.pop();
-                    final int start = output.getSpanStart(span);
-                    final int end;
-                    final Object list;
-                    if (!lists.empty() && (list = lists.peek()) instanceof Integer) {
-                        output.insert(start, list.toString() + ") ");
-                        lists.pop();
-                        lists.push((int) list + 1);
-                        end = output.length();
-                    } else {
-                        end = output.length();
-                        output.setSpan(new BulletSpan(lis.empty() ? 15 : 0), start, end,
-                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    }
-                    output.setSpan(span, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                case "code":
+                    endSpan(output, output.length());
+                    endSpan(output, output.length());
                     break;
-                }
+                case "lic":
+                case "li":
+                case "dt":
+                case "dd":
+                    startParagraph(output);
+                    endSpan(output, output.length());
+                    break;
+                case "dl":
                 case "ulc":
                 case "olc":
                 case "ul":
                 case "ol": {
-                    if (lists.empty()) break;
-                    final Object list = lists.pop();
+                    startParagraph(output);
+                    endSpan(output, output.length());
+                    lists.pop();
                     break;
                 }
                 case "clipboard": {
-                    final String content = output.subSequence(cbtStart, output.length()).toString();
-                    output.setSpan(new ClipboardSpan(content),
-                            cbtStart, output.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    final ClipboardSpan span = (ClipboardSpan) endSpan(output, output.length());
+                    final String content = output.subSequence(output.getSpanStart(span),
+                            output.getSpanEnd(span)).toString();
+                    span.setContent(content);
                     output.append('\u2398');
                     break;
                 }
