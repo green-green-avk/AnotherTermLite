@@ -34,7 +34,10 @@ public final class App extends Application {
 
     public final Settings settings = new Settings();
 
-    public TermSh termSh;
+    // Turned out, it's supposed that any obfuscated fields are reflection unreachable...
+    // Must be kept in order to prevent its unexpected early finalization.
+    @Keep
+    public TermSh termSh = null;
 
     @Override
     public void onCreate() {
