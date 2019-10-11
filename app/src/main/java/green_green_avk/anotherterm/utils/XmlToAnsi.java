@@ -139,6 +139,16 @@ public final class XmlToAnsi implements Iterable<String> {
             isInP = false;
         }
 
+        private int isBold = 0;
+
+        private void beginBold() {
+            if (isBold++ == 0) output.append("\u001B[1m");
+        }
+
+        private void endBold() {
+            if (--isBold == 0) output.append("\u001B[22m");
+        }
+
         private void beginTag() {
             switch (parser.getName().toLowerCase()) {
                 case "kbd":
@@ -146,7 +156,7 @@ public final class XmlToAnsi implements Iterable<String> {
                 case "clipboard":
                 case "code":
                 case "b":
-                    output.append("\u001B[1m");
+                    beginBold();
                     return;
                 case "h1":
                 case "h2":
@@ -155,7 +165,7 @@ public final class XmlToAnsi implements Iterable<String> {
                 case "h5":
                 case "h6":
                     renderParagraphInterval();
-                    output.append("\u001B[1m");
+                    beginBold();
                     return;
                 case "ul":
                 case "ol": {
@@ -179,7 +189,7 @@ public final class XmlToAnsi implements Iterable<String> {
                 case "dt":
                     indent++;
                     renderParagraphInterval();
-                    output.append("\u001B[1m");
+                    beginBold();
                     return;
                 case "dd":
                     indent++;
@@ -204,7 +214,7 @@ public final class XmlToAnsi implements Iterable<String> {
                 case "clipboard":
                 case "code":
                 case "b":
-                    output.append("\u001B[22m");
+                    endBold();
                     return;
                 case "h1":
                 case "h2":
@@ -212,7 +222,7 @@ public final class XmlToAnsi implements Iterable<String> {
                 case "h4":
                 case "h5":
                 case "h6":
-                    output.append("\u001B[22m");
+                    endBold();
                     renderParagraphInterval();
                     return;
                 case "ul":
@@ -222,7 +232,7 @@ public final class XmlToAnsi implements Iterable<String> {
                     return;
                 case "dt":
                     indent--;
-                    output.append("\u001B[22m");
+                    endBold();
                     renderParagraphInterval();
                     return;
                 case "dd":

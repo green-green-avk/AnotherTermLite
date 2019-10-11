@@ -5,6 +5,8 @@ import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -165,6 +167,8 @@ public final class TermSh {
                         new BinaryGetOpts.Option("notify", new String[]{"-N", "--notify"},
                                 BinaryGetOpts.Option.Type.NONE),
                         new BinaryGetOpts.Option("prompt", new String[]{"-p", "--prompt"},
+                                BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("recipient", new String[]{"-r", "--recipient"},
                                 BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
                                 BinaryGetOpts.Option.Type.NONE)
@@ -732,17 +736,31 @@ public final class TermSh {
                                 i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
                                         | (writeable ?
                                         Intent.FLAG_GRANT_WRITE_URI_PERMISSION : 0));
+                                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                        | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+                                final Intent ci;
+                                final String recipient = (String) opts.get("recipient");
+                                if (recipient == null) {
+                                    ci = Intent.createChooser(i, prompt);
+                                    ci.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                            | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
+                                } else {
+                                    if (recipient.indexOf('/') < 0)
+                                        i.setClassName(ui.ctx.getApplicationContext(), recipient);
+                                    else
+                                        i.setComponent(ComponentName.unflattenFromString(recipient));
+                                    ci = i;
+                                }
                                 if (opts.containsKey("notify"))
                                     RequesterActivity.showAsNotification(ui.ctx,
-                                            Intent.createChooser(i, prompt),
+                                            ci,
                                             ui.ctx.getString(R.string.title_shell_of_s,
                                                     ui.ctx.getString(R.string.app_name)),
                                             prompt + " (" + filename + ")",
                                             REQUEST_NOTIFICATION_CHANNEL_ID,
                                             NotificationCompat.PRIORITY_HIGH);
                                 else
-                                    ui.ctx.startActivity(Intent.createChooser(i, prompt)
-                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                                    ui.ctx.startActivity(ci);
                             } else {
                                 throw new ParseException("Bad arguments");
                             }
@@ -1083,7 +1101,8 @@ public final class TermSh {
                     }
                     shellCmd.exit(exitStatus);
                 } catch (final InterruptedException | SecurityException | IOException |
-                        ParseException | ArgsException | BinaryGetOpts.ParseException e) {
+                        ParseException | ArgsException | BinaryGetOpts.ParseException |
+                        ActivityNotFoundException e) {
                     try {
                         if (e instanceof ArgsException) {
                             printHelp(shellCmd.stdErr, shellCmd);

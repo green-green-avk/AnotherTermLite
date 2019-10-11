@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="desc_termsh_help" tools:ignore="TypographyDashes,TypographyEllipsis"><![CDATA[
-<h3>USAGE:</h3>
+<h3>Location</h3>
+
+<p><code>TERMSH=\"<clipboard>$LIB_DIR/libtermsh.so</clipboard>\"</code></p>
+
+<h3>Usage</h3>
 
 <p><code>$TERMSH [-r|--raw] &lt;command&gt; [&lt;args...&gt;]</code></p>
 <ul type=\"none\">
@@ -70,6 +74,19 @@ Command exits immediately.
 <li><code>-N|--notify</code> &#x2014; post a notification instead of open the chooser dialog.</li>
 <li><code>-m|--mime &lt;mime&gt;</code> &#x2014; Mime type, <code>*/*</code> - default.</li>
 <li><code>-p|--prompt &lt;prompt&gt;</code> &#x2014; to show in chooser dialog.</li>
+<li><code>-r|--recipient &lt;recipient&gt;</code> &#x2014; a particular activity
+to send this intent to. <code>&lt;recipient&gt;</code> can be:
+<ul>
+<li>An activity class name of this application.</li>
+<li>An activity of another application in form:
+<code>&lt;package&gt;/&lt;activity_class&gt;</code><br/>
+(<code>&lt;activity_class&gt;</code> can begin with a <code>.</code> (dot)
+to use <code>&lt;package&gt;</code> as it\'s prefix:<br/>
+<code>foo.bar/.Act</code> => <code>foo.bar/foo.bar.Act</code>).
+</li></ul>
+Example: <code>$TERMSH view
+-r \'<clipboard>green_green_avk.anotherterm.FavoriteEditorActivity</clipboard>\'
+-u \'local_terminal:/opts?execute=my_awesome_script\'</code></li>
 <li><code>-u|--uri</code> &#x2014; use URI instead of file.</li>
 </ul>
 </dd><br/>
@@ -87,10 +104,8 @@ if a file or URI is specified.
 <li><code>-m|--mime &lt;mime&gt;</code> &#x2014; Mime type, <code>*/*</code> - default.</li>
 <li><code>-n|--name &lt;name&gt;</code> &#x2014; name to use for representing a stream.</li>
 <li><code>-s|--size &lt;size&gt;</code> &#x2014; size in bytes to provide in the query answer
-                           if input is a stream.
-                           GMail client, for example, treats absence
-                           of the size as zero size even in case of
-                           a stream.</li>
+if input is a stream. GMail client, for example, treats absence of the size as zero size even
+in case of a stream.</li>
 <li><code>-p|--prompt &lt;prompt&gt;</code> &#x2014; to show in chooser dialog.</li>
 <li><code>-u|--uri</code> &#x2014; use URI instead of file.</li>
 </ul>
