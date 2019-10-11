@@ -349,7 +349,6 @@ public final class ConsoleInput implements BytesSink {
                                     break;
                                 case '\n':
                                 case '\u000B': // VT
-                                    currScrBuf.setCurrentAttrs(mCurrAttrs);
                                     lf();
                                     break;
                                 case '\t':
@@ -445,10 +444,10 @@ public final class ConsoleInput implements BytesSink {
                     case 'I': // CHT
                         tab(csi.getIntArg(0, 1));
                         return;
-                    case 'X': {
+                    case 'X':
+                        currScrBuf.setCurrentAttrs(mCurrAttrs);
                         currScrBuf.eraseChars(zao(csi.getIntArg(0, 1)));
                         return;
-                    }
                     case 'Z': // CBT
                         tab(-csi.getIntArg(0, 1));
                         return;
@@ -695,15 +694,19 @@ public final class ConsoleInput implements BytesSink {
                         consoleOutput.keyAutorepeat = value;
                     return;
                 case 9:
-                    if (consoleOutput != null)
+                    if (consoleOutput != null) {
+                        if (value) consoleOutput.unsetMouse();
                         consoleOutput.mouseX10 = value;
+                    }
                     return;
                 case 25:
                     cursorVisibility = value;
                     return;
                 case 1000:
-                    if (consoleOutput != null)
+                    if (consoleOutput != null) {
+                        if (value) consoleOutput.unsetMouse();
                         consoleOutput.mouseX11 = value;
+                    }
                     return;
                 case 1001:
                     if (consoleOutput != null)
@@ -718,16 +721,22 @@ public final class ConsoleInput implements BytesSink {
                         consoleOutput.mouseAnyEvent = value;
                     return;
                 case 1005:
-                    if (consoleOutput != null)
+                    if (consoleOutput != null) {
+                        if (value) consoleOutput.unsetMouse();
                         consoleOutput.mouseUTF8 = value;
+                    }
                     return;
                 case 1006:
-                    if (consoleOutput != null)
+                    if (consoleOutput != null) {
+                        if (value) consoleOutput.unsetMouse();
                         consoleOutput.mouseSGR = value;
+                    }
                     return;
                 case 1015:
-                    if (consoleOutput != null)
+                    if (consoleOutput != null) {
+                        if (value) consoleOutput.unsetMouse();
                         consoleOutput.mouseURXVT = value;
+                    }
                     return;
                 case 1047:
                     if (value) {

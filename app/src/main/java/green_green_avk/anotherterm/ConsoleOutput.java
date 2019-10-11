@@ -121,7 +121,15 @@ public final class ConsoleOutput {
     }
 
     public boolean isMouseSupported() {
-        return mouseSGR || mouseAnyEvent || mouseButtonEvent || mouseX11 || mouseX10;
+        return mouseSGR || mouseX11 || mouseX10;
+    }
+
+    public void unsetMouse() {
+        mouseURXVT = false;
+        mouseSGR = false;
+        mouseUTF8 = false;
+        mouseX11 = false;
+        mouseX10 = false;
     }
 
     public enum MouseEventType {PRESS, RELEASE, MOVE, VSCROLL}
