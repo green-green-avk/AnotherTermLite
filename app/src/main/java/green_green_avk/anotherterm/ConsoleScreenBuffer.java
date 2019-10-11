@@ -622,6 +622,18 @@ public final class ConsoleScreenBuffer {
         scroll(y, mMargins.bottom, n, currentAttrs);
     }
 
+    public void scrollUp(final int n) {
+        scroll(MathUtils.clamp(mMargins.top, 0, mHeight - 1),
+                MathUtils.clamp(mMargins.bottom, 0, mHeight - 1),
+                n, currentAttrs);
+    }
+
+    public void scrollDown(final int n) {
+        scroll(MathUtils.clamp(mMargins.bottom, 0, mHeight - 1),
+                MathUtils.clamp(mMargins.top, 0, mHeight - 1),
+                n, currentAttrs);
+    }
+
     public void insertChars(final int n) {
         insertChars(mPos.x, mPos.y, n);
     }

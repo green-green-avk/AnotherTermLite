@@ -580,6 +580,14 @@ public final class ConsoleInput implements BytesSink {
                         currScrBuf.setCurrentAttrs(mCurrAttrs);
                         currScrBuf.deleteChars(csi.getIntArg(0, 1));
                         return;
+                    case 'S': // SU VT420
+                        currScrBuf.setCurrentAttrs(mCurrAttrs);
+                        currScrBuf.scrollUp(csi.getIntArg(0, 1));
+                        return;
+                    case 'T': // SD VT420
+                        currScrBuf.setCurrentAttrs(mCurrAttrs);
+                        currScrBuf.scrollDown(csi.getIntArg(0, 1));
+                        return;
                     case 'h':
                     case 'l': {
                         final boolean value = csi.type == 'h';
