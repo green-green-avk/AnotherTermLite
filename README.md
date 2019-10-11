@@ -30,9 +30,9 @@ https://github.com/green-green-avk/build-proot-android/blob/master/README.md .
 
 * Telnet (no encryption).
 
-* No SSH in the Lite version.
+* No embedded SSH in the Lite version.
 
-* And no MoSH.
+* And no embedded MoSH.
 
 * Builtin screen keyboard and mouse.
 

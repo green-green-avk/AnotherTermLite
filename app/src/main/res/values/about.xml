@@ -15,7 +15,8 @@
 <li>Local Linux pty is supported. Feel free to use
 <a href=\"https://github.com/green-green-avk/build-proot-android/blob/master/README.md\">
 PRoot</a> with some Linux environment.</li>
-<li>Shell tool to interact with the Android environment is also present.
+<li><a href=\"info://green_green_avk.anothertermlite/termsh_man\">
+Shell tool</a> to interact with the Android environment is also present.
 <ul>
 <li>Content exchange between other applications and own files / pipes has been implemented.</li>
 <li>It also works in chrooted environments (PRoot at least).</li>
@@ -23,8 +24,8 @@ PRoot</a> with some Linux environment.</li>
 </ul>
 </li>
 <li>Telnet (no encryption).</li>
-<li>No SSH in the Lite version.</li>
-<li>And no MoSH.</li>
+<li>No embedded SSH in the Lite version.</li>
+<li>And no embedded MoSH.</li>
 <li>Builtin screen keyboard and mouse.</li>
 <li>Different charsets and customizable key mapping support.</li>
 </ul>
