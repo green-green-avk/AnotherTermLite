@@ -740,7 +740,7 @@ public class ConsoleScreenView extends ScrollableView
                         } else {
                             final int bs = translateButtons(event.getButtonState());
                             buttons = bs & ~mButtons;
-                            if (buttons == 0) break; // strange
+                            if (buttons == 0) break;
                             mButtons = bs;
                         }
                         consoleInput.consoleOutput.feed(ConsoleOutput.MouseEventType.PRESS, buttons, x, y);
@@ -766,7 +766,7 @@ public class ConsoleScreenView extends ScrollableView
                         } else {
                             final int bs = translateButtons(event.getButtonState());
                             buttons = mButtons & ~bs;
-                            if (buttons == 0) break; // strange
+                            if (buttons == 0) break;
                             mButtons = bs;
                         }
                         consoleInput.consoleOutput.feed(ConsoleOutput.MouseEventType.RELEASE, buttons, x, y);
@@ -776,8 +776,14 @@ public class ConsoleScreenView extends ScrollableView
             }
             return true;
         }
+        if (action == MotionEvent.ACTION_DOWN) {
+            if (event.getToolType(0) != MotionEvent.TOOL_TYPE_FINGER)
+                mButtons = translateButtons(event.getButtonState());
+        }
         final boolean ret = super.onTouchEvent(event);
         if (action == MotionEvent.ACTION_UP) {
+            if (event.getToolType(0) != MotionEvent.TOOL_TYPE_FINGER)
+                mButtons = translateButtons(event.getButtonState());
             unsetCurrentSelectionMarker();
             inGesture = false;
             adjustSelectionPopup();
@@ -893,8 +899,16 @@ public class ConsoleScreenView extends ScrollableView
         final int x = getBufferTextPosX(MathUtils.clamp((int) e.getX(), 0, getWidth() - 1));
         final int y = getBufferTextPosY(MathUtils.clamp((int) e.getY(), 0, getHeight() - 1));
         if (isMouseSupported()) {
-            consoleInput.consoleOutput.feed(ConsoleOutput.MouseEventType.PRESS, ConsoleOutput.MOUSE_LEFT, x, y);
-            consoleInput.consoleOutput.feed(ConsoleOutput.MouseEventType.RELEASE, ConsoleOutput.MOUSE_LEFT, x, y);
+            final int buttons;
+            if (e.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER) {
+                buttons = MotionEvent.BUTTON_PRIMARY;
+            } else {
+                buttons = mButtons & ~translateButtons(e.getButtonState());
+            }
+            if (buttons != 0) {
+                consoleInput.consoleOutput.feed(ConsoleOutput.MouseEventType.PRESS, buttons, x, y);
+                consoleInput.consoleOutput.feed(ConsoleOutput.MouseEventType.RELEASE, buttons, x, y);
+            }
         } else {
             setSelectionMode(true);
             setSelectionModeIsExpr(true);
