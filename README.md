@@ -27,6 +27,7 @@ https://github.com/green-green-avk/build-proot-android/blob/master/README.md .
    - Content exchange between other applications and own files / pipes has been implemented.
    - It also works in chrooted environments (PRoot at least).
    - USB serial port dongle access from the command line is also implemented.
+   - libusb support on nonrooted Android, see https://github.com/green-green-avk/AnotherTermLite/wiki/Installing-libusb-for-nonrooted-Android .
 
 * Telnet (no encryption).
 
