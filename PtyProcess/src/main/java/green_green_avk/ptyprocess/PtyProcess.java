@@ -1,14 +1,20 @@
 package green_green_avk.ptyprocess;
 
+import android.annotation.TargetApi;
+import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.support.annotation.Keep;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.system.ErrnoException;
+import android.system.Os;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Locale;
 import java.util.Map;
 
@@ -429,4 +435,45 @@ public final class PtyProcess extends Process {
 
     @Keep
     public static native long getArgMax();
+
+    /*
+     * It seems, android.system.Os class is trying to be linked by Dalvik even when inside
+     * appropriate if statement and raises java.lang.VerifyError on the constructor call...
+     * API 19 is affected at least.
+     * Moving to separate class to work it around.
+     */
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private static final class Utils21 {
+        private Utils21() {
+        }
+
+        private static void close(@NonNull final FileDescriptor fd) throws IOException {
+            try {
+                Os.close(fd);
+            } catch (final ErrnoException e) {
+                throw new IOException(e.getMessage(), e);
+            }
+        }
+    }
+
+    private static final String sCloseWaError = "Cannot close socket: workaround failed";
+
+    public static void close(@NonNull final FileDescriptor fd) throws IOException {
+        if (!fd.valid()) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Utils21.close(fd);
+        } else {
+            final int _fd;
+            try {
+                _fd = (int) FileDescriptor.class.getMethod("getInt$").invoke(fd);
+            } catch (final IllegalAccessException e) {
+                throw new IOException(sCloseWaError);
+            } catch (final InvocationTargetException e) {
+                throw new IOException(sCloseWaError);
+            } catch (final NoSuchMethodException e) {
+                throw new IOException(sCloseWaError);
+            }
+            ParcelFileDescriptor.adoptFd(_fd).close();
+        }
+    }
 }

@@ -1,7 +1,6 @@
 package green_green_avk.anotherterm;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -14,7 +13,6 @@ import android.net.LocalServerSocket;
 import android.net.LocalSocket;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import android.os.Process;
@@ -26,8 +24,6 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.FileProvider;
 import android.support.v4.math.MathUtils;
-import android.system.ErrnoException;
-import android.system.Os;
 import android.util.Log;
 
 import java.io.DataInputStream;
@@ -43,7 +39,6 @@ import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.Reader;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.CharBuffer;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -203,7 +198,6 @@ public final class TermSh {
                 });
 
         private final UiBridge ui;
-        private LocalServerSocket serverSocket;
 
         private UiServer(@NonNull final UiBridge ui) {
             this.ui = ui;
@@ -262,45 +256,6 @@ public final class TermSh {
                 }
             };
 
-            // It seems, android.system.Os class is trying to be linked by Dalvik even when inside
-            // appropriate if statement and raises java.lang.VerifyError on the constructor call...
-            // API 19 is affected at least.
-            // Moving to separate class to work it around.
-            @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-            private static final class Utils21 {
-                private Utils21() {
-                }
-
-                private static void close(@NonNull final FileDescriptor fd) throws IOException {
-                    if (fd.valid()) {
-                        try {
-                            Os.close(fd);
-                        } catch (final ErrnoException e) {
-                            throw new IOException(e.getMessage(), e);
-                        }
-                    }
-                }
-            }
-
-            private static void close(@NonNull final FileDescriptor fd) throws IOException {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    Utils21.close(fd);
-                } else {
-                    final int _fd;
-                    try {
-                        _fd = (int) FileDescriptor.class.getMethod("getInt$").invoke(fd);
-                    } catch (final IllegalAccessException e) {
-                        throw new IOException("Cannot close temporary socket: workaround failed");
-                    } catch (final InvocationTargetException e) {
-                        throw new IOException("Cannot close temporary socket: workaround failed");
-                    } catch (final NoSuchMethodException e) {
-                        throw new IOException("Cannot close temporary socket: workaround failed");
-                    }
-                    // I see no reason to implement a native method here.
-                    ParcelFileDescriptor.adoptFd(_fd).close();
-                }
-            }
-
             private void close() {
                 synchronized (closeLock) {
                     if (closed) return;
@@ -325,7 +280,7 @@ public final class TermSh {
                     throws IOException {
                 final ParcelFileDescriptor pfd = ParcelFileDescriptor.dup(fd);
                 try {
-                    close(fd);
+                    PtyProcess.close(fd);
                 } catch (final IOException ignored) {
                 }
                 return pfd;
@@ -472,8 +427,10 @@ public final class TermSh {
                 currDir = parsePwd(cis);
                 args = parseArgs(cis);
                 final FileDescriptor[] ioFds = socket.getAncillaryFileDescriptors();
-                if (ioFds == null || ioFds.length != 4)
+                if (ioFds == null || ioFds.length != 4) {
+                    if (ioFds != null) for (final FileDescriptor fd : ioFds) PtyProcess.close(fd);
                     throw new ParseException("Bad descriptors");
+                }
                 stdIn = wrapInputFD(ioFds[0]);
                 stdOut = wrapOutputFD(ioFds[1]);
                 stdErr = wrapOutputFD(ioFds[2]);
@@ -1118,6 +1075,7 @@ public final class TermSh {
 
         @Override
         public void run() {
+            LocalServerSocket serverSocket = null;
             try {
                 serverSocket = new LocalServerSocket(ui.ctx.getPackageName() + ".termsh");
                 while (!Thread.interrupted()) {
@@ -1133,10 +1091,11 @@ public final class TermSh {
             } catch (final IOException e) {
                 Log.e("TermShServer", "IO", e);
             }
-            try {
-                serverSocket.close();
-            } catch (final IOException ignored) {
-            }
+            if (serverSocket != null)
+                try {
+                    serverSocket.close();
+                } catch (final IOException ignored) {
+                }
         }
     }
 

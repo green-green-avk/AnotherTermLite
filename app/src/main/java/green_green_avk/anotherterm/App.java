@@ -4,6 +4,8 @@ import android.app.Application;
 import android.preference.PreferenceManager;
 import android.support.annotation.Keep;
 
+import green_green_avk.libusbmanager.LibUsbManager;
+
 public final class App extends Application {
 
     public static final class Settings extends green_green_avk.anotherterm.utils.Settings {
@@ -39,6 +41,9 @@ public final class App extends Application {
     @Keep
     public TermSh termSh = null;
 
+    @Keep
+    public LibUsbManager libUsbManager = null;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -47,5 +52,6 @@ public final class App extends Application {
         TermKeyMapManager.init(this);
         FavoritesManager.init(this);
         termSh = new TermSh(this);
+        libUsbManager = new LibUsbManager(this);
     }
 }
