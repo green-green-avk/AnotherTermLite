@@ -671,8 +671,8 @@ public class ConsoleScreenView extends ScrollableView
         if (getWidth() <= 0 || getHeight() <= 0)
             return null;
         final float s = Math.min((float) w / getWidth(), (float) h / getHeight());
-        w = (int) (getWidth() * s);
-        h = (int) (getHeight() * s);
+        w = Math.max((int) (getWidth() * s), 1);
+        h = Math.max((int) (getHeight() * s), 1);
         final Bitmap r = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         final Canvas c = new Canvas(r);
         c.scale(s, s);
