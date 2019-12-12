@@ -16,6 +16,7 @@ import android.os.ParcelFileDescriptor;
 import android.os.Process;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.UiThread;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -46,10 +47,17 @@ public final class LibUsbManager {
     }
 
     private final Context ctx;
+    private final Handler uiHandler;
     private final Thread lth;
 
     private void showError(@NonNull final Throwable e) {
-        Toast.makeText(ctx, "LibUSB helper: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        uiHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(ctx, "LibUSB helper: " + e.getMessage(), Toast.LENGTH_LONG)
+                        .show();
+            }
+        });
     }
 
     @NonNull
@@ -215,8 +223,10 @@ public final class LibUsbManager {
         }
     };
 
+    @UiThread
     public LibUsbManager(@NonNull final Context ctx) {
         this.ctx = ctx.getApplicationContext();
+        uiHandler = new Handler();
         lth = new Thread(server, "LibUsbServer");
         lth.setDaemon(true);
         lth.start();
