@@ -5,7 +5,7 @@ Local pty, USB serial port and Telnet terminal client for Android.
 * https://github.com/green-green-avk/AnotherTermLite/wiki
 
 
-Why another one? Just to have:
+## Highlights
 
 * Local pty, USB serial port (UART) etc. support in the same application;
 
@@ -14,7 +14,7 @@ Why another one? Just to have:
 * Ability to set fixed screen columns and/or rows numbers.
 
 
-Features:
+## Features
 
 * Minimum supported Android version is 4.0 Ice Cream Sandwich.
 
@@ -40,7 +40,7 @@ https://github.com/green-green-avk/build-proot-android/blob/master/README.md .
 * Different charsets and customizable key mapping support.
 
 
-3rd party components:
+## 3rd party components
 
 * USB UART: https://github.com/felHR85/UsbSerial
 * Console font: https://www.fontsquirrel.com/fonts/dejavu-sans-mono
