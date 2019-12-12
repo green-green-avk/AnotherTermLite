@@ -56,4 +56,12 @@
         android:textStyle="italic"
         app:xmlText="@string/desc_local_param_execute" />
 
+    <green_green_avk.anotherterm.ui.HtmlTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="@dimen/text_margin"
+        android:layout_marginRight="@dimen/text_margin"
+        android:textStyle="italic"
+        app:xmlText="@string/desc_shell_env_help" />
+
 </LinearLayout>

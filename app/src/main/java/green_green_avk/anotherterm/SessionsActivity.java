@@ -1,6 +1,7 @@
 package green_green_avk.anotherterm;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -151,6 +152,11 @@ public final class SessionsActivity extends AppCompatActivity {
             }
             case R.id.action_settings: {
                 startActivity(new Intent(this, SettingsActivity.class));
+                return true;
+            }
+            case R.id.action_help: {
+                startActivity(new Intent(this, InfoActivity.class)
+                        .setData(Uri.parse("info://local/help")));
                 return true;
             }
             case R.id.action_about: {

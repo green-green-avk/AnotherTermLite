@@ -41,6 +41,11 @@
         android:title="@string/action_set_terminal_size"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_help"
+        android:orderInCategory="200"
+        android:title="@string/action_help"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_terminate"
         android:icon="@drawable/ic_close"
         android:orderInCategory="200"

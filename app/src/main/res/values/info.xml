@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+<string name="desc_main_help"><![CDATA[
+<h1>Local shell</h1>
+<ul>
+<li><a href=\"info://green_green_avk.anothertermlite/shell_env_man\">Environment</a></li>
+<li><a href=\"info://green_green_avk.anothertermlite/termsh_man\">termsh</a></li>
+<li><a href=\"https://github.com/green-green-avk/AnotherTermLite/wiki/Installing-Linux-under-PRoot\">Installing Linux under PRoot</a></li>
+<li><a href=\"https://github.com/green-green-avk/AnotherTermLite/wiki/Installing-libusb-for-nonrooted-Android\">Installing libusb for nonrooted Android</a></li>
+</ul>
+]]></string>
 <string name="desc_keymap_escapes"><![CDATA[
 <h1>Key Map Escapes</h1>
 <p>All symbols are represented in the UTF-16 encoding and will be converted to the output stream

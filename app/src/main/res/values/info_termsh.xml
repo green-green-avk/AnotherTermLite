@@ -9,8 +9,10 @@
 
 <p><code>$TERMSH [-r|--raw] &lt;command&gt; [&lt;args...&gt;]</code></p>
 <ul type=\"none\">
-<li><code>-r|--raw</code> &#x2014; raw mode as set by <code>cfmakeraw()</code> libc function.
-        (Beware, <kbd>Ctrl-C</kbd> etc. are not captured by the terminal in this mode.)</li>
+<li><code>-r|--raw</code> &#x2014; switch a tty
+to the raw mode as set by <code>cfmakeraw()</code> libc function
+for the time of command execution.
+(Beware, <kbd>Ctrl-C</kbd> etc. are not captured by the terminal in this mode.)</li>
 </ul>
 
 <h4>Commands:</h4>
@@ -59,7 +61,8 @@ when stream is read to its EOF or it can be closed by
                     <code>$TERMSH</code> termination is also closes the stream.
                     Use when you need to keep a shell pipe line running;<br/>
                     example: <code>tar -czv * | $TERMSH uri -w</code></li>
-<li><code>-c|--close-stream &lt;URI&gt;</code> &#x2014; unbind the stream <code>&lt;URI&gt;</code> and free related resources.</li>
+<li><code>-c|--close-stream &lt;URI&gt;</code> &#x2014; unbind the stream <code>&lt;URI&gt;</code>
+and free related resources.</li>
 <li><code>-l|--list-streams</code> &#x2014; list all bound stream URIs.</li>
 </ul>
 </dd><br/>
