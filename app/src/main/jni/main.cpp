@@ -181,8 +181,7 @@ static void _onSignalExit(int s) {
  * TODO: review this hack
  */
 static int fixFd(const int fd) {
-    const int ff = fcntl(fd, F_GETFL);
-    if ((ff & O_APPEND) && isatty(fd)) {
+    if (isatty(fd)) {
         char fn[PATH_MAX];
         snprintf(fn, sizeof(fn), "/proc/self/fd/%u", fd);
         return open(fn, O_RDWR);
