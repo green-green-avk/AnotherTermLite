@@ -2,6 +2,10 @@
 <resources>
 <string name="desc_about"><![CDATA[
 <h1>Introduction</h1>
+<p>
+<b>Note:</b> Superseded by its full version:
+<a href=\"https://play.google.com/store/apps/details?id=green_green_avk.anotherterm\">Another Term</a>.
+</p>
 <p>Why another one? Just to have:</p>
 <ul>
     <li>Local pty, USB UART etc. support in the same application;</li>

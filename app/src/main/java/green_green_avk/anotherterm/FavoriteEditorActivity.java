@@ -362,7 +362,7 @@ public final class FavoriteEditorActivity extends AppCompatActivity {
             return;
         }
 
-        String name = intent.getStringExtra(C.IFK_MSG_NAME);
+        final String name = intent.getStringExtra(C.IFK_MSG_NAME);
         mOldName = name;
         if (name != null) {
             mMakeNew = intent.getBooleanExtra(C.IFK_MSG_NEW, false);

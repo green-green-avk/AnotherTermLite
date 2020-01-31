@@ -8,8 +8,8 @@ android {
         applicationId 'green_green_avk.anothertermlite'
         minSdkVersion 14
         targetSdkVersion 28
-        versionCode 43
-        versionName "MkIs3"
+        versionCode 44
+        versionName "MkIs4"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
@@ -61,7 +61,7 @@ dependencies {
     implementation project(':usbserial')
     implementation project(':TelnetClient')
     implementation 'org.apache.commons:commons-collections4:4.2'
-    implementation project(path: ':libusbmanager')
+    implementation project(':libusbmanager')
 }
 
 repositories {

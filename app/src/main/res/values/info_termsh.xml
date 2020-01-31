@@ -44,7 +44,7 @@ uri -l|--list-streams
 </code></p></dt>
 <dd>
 Get own content provider URI for specified file or stream or close previously opened stream.
-Command exits immediately unless <code>-w|--wait</code> is specified.
+<br/>Command exits immediately unless <code>-w|--wait</code> is specified.
 In case of stream, the <code>&lt;URI&gt;</code> will automatically be unbound
 when stream is read to its EOF or it can be closed by
 <code>-c|--close-stream &lt;URI&gt;</code> option.
@@ -72,7 +72,7 @@ and free related resources.</li>
 </code></p></dt>
 <dd>
 Open for view / edit with appropriate temporary access rights.
-Command exits immediately.
+<br/>Command exits immediately.
 <ul type=\"none\">
 <li><code>-N|--notify</code> &#x2014; post a notification instead of open the chooser dialog.</li>
 <li><code>-m|--mime &lt;mime&gt;</code> &#x2014; Mime type, <code>*/*</code> - default.</li>
@@ -100,7 +100,7 @@ send [&lt;options...&gt;] [--] [&lt;file|URI&gt;]
 <dd>
 Send (android.intent.action.SEND).
 If no <code>&lt;file|URI&gt;</code> is specified, stdin is used.
-Command exits after a stream was sent or immediately
+<br/>Command exits after a stream was sent or immediately
 if a file or URI is specified.
 <ul type=\"none\">
 <li><code>-N|--notify</code> &#x2014; post a notification instead of open the chooser dialog.</li>
@@ -156,7 +156,6 @@ cat [&lt;URI&gt; ...]
 <dd>
 Concatenate the stdin (if not a tty or no arguments given)
 and specified Android URIs content to the stdout.
-Command exits immediately.
 <h5>Examples:</h5>
 <p><code>
 $TERMSH cat content://$APP_ID.linksprovider/html/some_url_to_be_wrapped_into_html
@@ -194,7 +193,12 @@ Connect to an USB serial dongle and use stdin / stdout.
 <li>flowcontrol: <code>off</code>, <code>xon_xoff</code>, <code>rts_cts</code>, <code>dsr_dtr</code></li>
 </ul>
 <p><b>Default:</b> <code>9600/8/1/none/off</code></p>
-</dd>
+</dd><br/>
+
+<dt><p><code>
+arch
+</code></p></dt>
+<dd>Supported architectures list from the most preferable to the least preferable.</dd><br/>
 
 </dl>
 
@@ -205,11 +209,7 @@ Connect to an USB serial dongle and use stdin / stdout.
 
 <h4>Environment variables:</h4>
 <ul type=\"none\">
-<li><code>TERMSH_UID</code> &#x2014; a real UID for this application to use for spoofing detection.
-It\'s actual before Android 6.0:
-<a href=\"https://android.googlesource.com/platform/external/sepolicy/+/android-6.0.1_r81/untrusted_app.te#141\">
-https://android.googlesource.com/platform/external/sepolicy/+/android-6.0.1_r81/untrusted_app.te#141
-</a></li>
+<li><code>TERMSH_UID</code> &#x2014; a real UID for this application to use for spoofing detection.</li>
 </ul>
 ]]></string>
 </resources>

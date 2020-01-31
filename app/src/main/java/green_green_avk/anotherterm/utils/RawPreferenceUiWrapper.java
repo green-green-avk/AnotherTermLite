@@ -1,5 +1,6 @@
 package green_green_avk.anotherterm.utils;
 
+import android.support.annotation.NonNull;
 import android.text.InputType;
 import android.util.Log;
 import android.view.View;
@@ -18,10 +19,10 @@ import java.util.Map;
 import green_green_avk.anotherterm.R;
 
 public final class RawPreferenceUiWrapper implements PreferenceUiWrapper {
-    public final Map<String, View> views = new HashMap<>();
-    public final Map<String, List<?>> listsValues = new HashMap<>();
+    private final Map<String, View> views = new HashMap<>();
+    private final Map<String, List<?>> listsValues = new HashMap<>();
 
-    private void searchForTags(final View root) {
+    private void searchForTags(@NonNull final View root) {
         final Object tag = root.getTag();
         if (tag instanceof String) {
             final String[] chs = ((String) tag).split("/");
@@ -42,7 +43,7 @@ public final class RawPreferenceUiWrapper implements PreferenceUiWrapper {
         views.clear();
     }
 
-    public void addBranch(final View root) {
+    public void addBranch(@NonNull final View root) {
         searchForTags(root);
     }
 
@@ -57,6 +58,7 @@ public final class RawPreferenceUiWrapper implements PreferenceUiWrapper {
         return -1;
     }
 
+    @Override
     public Object get(final String key) {
         if (!views.containsKey(key)) return null;
         final View view = views.get(key);
@@ -90,6 +92,7 @@ public final class RawPreferenceUiWrapper implements PreferenceUiWrapper {
         return null;
     }
 
+    @Override
     public void set(final String key, final Object value) {
         if (!views.containsKey(key)) return;
         final View view = views.get(key);
@@ -116,6 +119,8 @@ public final class RawPreferenceUiWrapper implements PreferenceUiWrapper {
         }
     }
 
+    @Override
+    @NonNull
     public Map<String, Object> getPreferences() {
         final Map<String, Object> r = new HashMap<>();
         for (final String k : views.keySet()) {
@@ -124,7 +129,8 @@ public final class RawPreferenceUiWrapper implements PreferenceUiWrapper {
         return r;
     }
 
-    public void setPreferences(final Map<String, ?> pp) {
+    @Override
+    public void setPreferences(@NonNull final Map<String, ?> pp) {
         for (final Map.Entry<String, ?> ent : pp.entrySet()) {
             set(ent.getKey(), ent.getValue());
         }

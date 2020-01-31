@@ -131,6 +131,8 @@ public final class SessionsActivity extends AppCompatActivity {
 
         prepareFavoritesList();
         prepareSessionsList();
+
+        NewsDialog.showUnseen(this);
     }
 
     @Override
