@@ -54,9 +54,9 @@
     <string name="do_you_want_to_delete_this_favorite">Do you want to delete this favorite?</string>
     <string name="msg_favorite_deleted">Favorite deleted</string>
     <string name="action_about">About</string>
-    <string name="terminal_string">Terminal string</string>
-    <string name="execute_">Execute:</string>
-    <string name="shell">shell</string>
+    <string name="label_terminal_string">Terminal string</string>
+    <string name="label_execute_">Execute:</string>
+    <string name="label_shell">shell</string>
     <string name="keepalive_interval_">KeepAlive Interval:</string>
     <string name="time_unit_seconds">seconds</string>
     <string name="choose">Choose</string>
@@ -74,29 +74,6 @@
     <string name="desc_local_param_execute"><![CDATA[
         <p>If the field is empty, <code>/system/bin/sh -l</code> will be executed;<br/>
         <code>/system/bin/sh -l -c &lt;command&gt;</code> otherwise.</p>
-        <p>Commands:
-        <ul>
-        <li><clipboard>$LIB_DIR/libtermsh.so</clipboard> &#x2014; a tool to use Android
-        functionality from the shell.
-        Run with <code>help</code> command for
-        <a href=\"info://green_green_avk.anothertermlite/termsh_man\">details</a>.</li>
-        </ul></p>
-        <p>Environment variables:
-        <ul>
-        <li><clipboard>DATA_DIR</clipboard> &#x2014; default persistent data directory</li>
-        <li><clipboard>PROTECTED_DATA_DIR</clipboard> &#x2014; default device-protected persistent
-        data directory (set if available)</li>
-        <li><clipboard>SHARED_DATA_DIR</clipboard> &#x2014;
-        directory on the primary shared/external storage device
-        where the application can place persistent files it owns
-        (set if available)</li>
-        <li><clipboard>EXTERNAL_DATA_DIR</clipboard> &#x2014;
-        an alias to <clipboard>SHARED_DATA_DIR</clipboard></li>
-        <li><clipboard>PUBLIC_DATA_DIR</clipboard> &#x2014;
-        the primary shared/external storage directory (set if available)</li>
-        <li><clipboard>LIB_DIR</clipboard> &#x2014; native binaries path</li>
-        <li><clipboard>APP_ID</clipboard> &#x2014; application id</li>
-        </ul></p>
     ]]></string>
     <string name="example_local_param_execute">export TERMSH=\"$LIB_DIR/libtermsh.so\" ; cd $DATA_DIR ; sh</string>
     <string name="conntype_telnet">Telnet</string>
@@ -128,4 +105,7 @@
     <string name="msg_text_is_too_large_to_be_copied_into_clipboard">It seems, the text is too large to be copied into the clipboard on this particular device.
         Possibly, some workaround will be implemented in the future.</string>
     <string name="action_help">Help</string>
+    <string name="msg_pick_application">Pick application</string>
+    <string name="msg_pick_destination">Pick destination</string>
+    <string name="msg_pick_source">Pick source</string>
 </resources>

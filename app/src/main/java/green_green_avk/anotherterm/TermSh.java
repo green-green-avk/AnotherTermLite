@@ -42,6 +42,8 @@ import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.CharBuffer;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -77,7 +79,9 @@ public final class TermSh {
     }
 
     private static final class UiBridge {
+        @NonNull
         private final Context ctx;
+        @NonNull
         private final Handler handler;
 
         private final AtomicInteger notificationId = new AtomicInteger(0);
@@ -188,14 +192,14 @@ public final class TermSh {
                 new BinaryGetOpts.Options(new BinaryGetOpts.Option[]{
                         new BinaryGetOpts.Option("mime", new String[]{"-m", "--mime"},
                                 BinaryGetOpts.Option.Type.STRING),
+                        new BinaryGetOpts.Option("name", new String[]{"-n", "--name"},
+                                BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("notify", new String[]{"-N", "--notify"},
                                 BinaryGetOpts.Option.Type.NONE),
-                        new BinaryGetOpts.Option("name", new String[]{"-n", "--name"},
+                        new BinaryGetOpts.Option("prompt", new String[]{"-p", "--prompt"},
                                 BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("size", new String[]{"-s", "--size"},
                                 BinaryGetOpts.Option.Type.INT),
-                        new BinaryGetOpts.Option("prompt", new String[]{"-p", "--prompt"},
-                                BinaryGetOpts.Option.Type.STRING),
                         new BinaryGetOpts.Option("uri", new String[]{"-u", "--uri"},
                                 BinaryGetOpts.Option.Type.NONE)
                 });
@@ -562,6 +566,11 @@ public final class TermSh {
                         case "help":
                             printHelp(shellCmd.stdOut, shellCmd);
                             break;
+                        case "version": {
+                            shellCmd.stdOut.write(Misc.toUTF8(
+                                    ui.ctx.getString(R.string.versionName) + "\n"));
+                            break;
+                        }
                         case "notify": {
                             final BinaryGetOpts.Parser ap = new BinaryGetOpts.Parser(shellCmd.args);
                             ap.skip();
@@ -680,7 +689,8 @@ public final class TermSh {
                             final Map<String, ?> opts = ap.parse(OPEN_OPTS);
                             String mime = (String) opts.get("mime");
                             String prompt = (String) opts.get("prompt");
-                            if (prompt == null) prompt = "Pick application";
+                            if (prompt == null)
+                                prompt = ui.ctx.getString(R.string.msg_pick_application);
                             if (shellCmd.args.length - ap.position == 1) {
                                 final String filename =
                                         Misc.fromUTF8(shellCmd.args[ap.position]);
@@ -741,7 +751,8 @@ public final class TermSh {
                             String mime = (String) opts.get("mime");
                             if (mime == null) mime = "*/*";
                             String prompt = (String) opts.get("prompt");
-                            if (prompt == null) prompt = "Pick destination";
+                            if (prompt == null)
+                                prompt = ui.ctx.getString(R.string.msg_pick_destination);
                             final String name;
                             final Uri uri;
                             final BlockingSync<Object> result = new BlockingSync<>();
@@ -813,7 +824,7 @@ public final class TermSh {
                             String mime = (String) opts.get("mime");
                             if (mime == null) mime = "*/*";
                             String prompt = (String) opts.get("prompt");
-                            if (prompt == null) prompt = "Pick document";
+                            if (prompt == null) prompt = ui.ctx.getString(R.string.msg_pick_source);
 
                             OutputStream output;
                             final ChrootedFile outputFile;
@@ -1064,9 +1075,47 @@ public final class TermSh {
                             }
                             break;
                         }
+                        case "uri-encode": {
+                            switch (shellCmd.args.length) {
+                                case 3: {
+                                    final String allow = Misc.fromUTF8(shellCmd.args[2]);
+                                    final String v = Misc.fromUTF8(shellCmd.args[1]);
+                                    shellCmd.stdOut.write(Misc.toUTF8(
+                                            Uri.encode(v, allow) + "\n"));
+                                    break;
+                                }
+                                case 2: {
+                                    final String v = Misc.fromUTF8(shellCmd.args[1]);
+                                    shellCmd.stdOut.write(Misc.toUTF8(
+                                            URLEncoder.encode(v, "UTF8") + "\n"));
+                                    break;
+                                }
+                                default:
+                                    throw new ParseException("Wrong number of arguments");
+                            }
+                            break;
+                        }
+                        case "uri-decode": {
+                            if (shellCmd.args.length != 2)
+                                throw new ParseException("Wrong number of arguments");
+                            final String v = Misc.fromUTF8(shellCmd.args[1]);
+                            final String r;
+                            try {
+                                r = URLDecoder.decode(v, "UTF8");
+                            } catch (final IllegalArgumentException e) {
+                                throw new ParseException(e.getMessage());
+                            }
+                            shellCmd.stdOut.write(Misc.toUTF8(r + "\n"));
+                            break;
+                        }
                         case "arch": {
+                            shellCmd.stdOut.write(Misc.toUTF8(StringUtils.joinWith(
+                                    " ", (Object[]) getAbis()) + "\n"));
+                            break;
+                        }
+                        case "sdk": {
                             shellCmd.stdOut.write(Misc.toUTF8(
-                                    StringUtils.joinWith(" ", (Object[]) getAbis()) + "\n"));
+                                    Build.VERSION.SDK_INT + "\n"));
                             break;
                         }
                         default:
