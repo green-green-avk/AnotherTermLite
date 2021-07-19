@@ -2,7 +2,11 @@
 
 Local pty, USB serial port and Telnet terminal client for Android.
 
-Superseded by Another Term - https://github.com/green-green-avk/AnotherTerm .
+---
+
+**SUPERSEDED by Another Term - <https://github.com/green-green-avk/AnotherTerm>**
+
+---
 
 * https://play.google.com/store/apps/details?id=green_green_avk.anothertermlite
 * https://github.com/green-green-avk/AnotherTermLite/wiki
